@@ -21,11 +21,11 @@ engine: sa.Engine = sa.engine.create_engine(url=os.getenv("URL_AIVEN_PG"))
 
 # %%
 stmt: str = """
-    CREATE TABLE IF NOT EXISTS lançamento (
-        id_lançamento SERIAL PRIMARY KEY, -- PostgreSQL
-        -- id_lançamento INTEGER AUTO_INCREMENT PRIMARY KEY, -- MySQL
-        lançamento VARCHAR(60) NOT NULL
-    )
+CREATE TABLE IF NOT EXISTS lançamento (
+    id_lançamento SERIAL PRIMARY KEY, -- PostgreSQL
+    -- id_lançamento INTEGER AUTO_INCREMENT PRIMARY KEY, -- MySQL
+    lançamento VARCHAR(60) NOT NULL
+)
 """
 with engine.begin() as cnx:
     cnx.execute(sa.text(stmt))
@@ -33,14 +33,14 @@ print("Tabela 'lançamento' criada com sucesso!")
 
 # %%
 stmt: str = """
-    CREATE TABLE IF NOT EXISTS espelho (
-        id SERIAL PRIMARY KEY, -- PostgreSQL
-        -- id INTEGER AUTO_INCREMENT PRIMARY KEY, -- MySQL
-        id_lançamento INTEGER NOT NULL,
-        período INTEGER NOT NULL,
-        acerto BOOLEAN DEFAULT FALSE NOT NULL,
-        valor REAL NOT NULL
-    )
+CREATE TABLE IF NOT EXISTS espelho (
+    id SERIAL PRIMARY KEY, -- PostgreSQL
+    -- id INTEGER AUTO_INCREMENT PRIMARY KEY, -- MySQL
+    id_lançamento INTEGER NOT NULL,
+    período INTEGER NOT NULL,
+    acerto BOOLEAN DEFAULT FALSE NOT NULL,
+    valor REAL NOT NULL
+)
 """
 with engine.begin() as cnx:
     cnx.execute(sa.text(stmt))
@@ -61,16 +61,16 @@ joints: pd.DataFrame = pd.merge(left=release, right=mirror, how="inner", on=["id
 
 # %%
 # exibir a tabela de lançamento
-print(release)
+print(release.rename(columns=dict(id_lançamento="Código", lançamento="Lançamento")))
 
 # %%
 # exibir os períodos com seus soldos mensais do ano desejado
 """
-    SELECT período AS Período, SUM(valor) AS Total
-    FROM espelho
-    WHERE LEFT(CAST(período AS CHAR(6)), 4) = CAST(EXTRACT(YEAR FROM CURRENT_DATE) AS CHAR(4)) -- PostgreSQL
-    -- WHERE SUBSTR(período, 1, 4) = EXTRACT(YEAR FROM CURDATE()) -- MySQL
-    GROUP BY período
+SELECT período AS Período, SUM(valor) AS Total
+FROM espelho
+WHERE LEFT(CAST(período AS CHAR(6)), 4) = CAST(EXTRACT(YEAR FROM CURRENT_DATE) AS CHAR(4)) -- PostgreSQL
+-- WHERE SUBSTR(período, 1, 4) = EXTRACT(YEAR FROM CURDATE()) -- MySQL
+GROUP BY período
 """
 
 year: int = 2025
@@ -101,18 +101,18 @@ print(df_year_month)
 # %%
 # exibir a tabela espelho para o mês atual
 """
-    SELECT
-        l.lançamento,
-        e.período,
-        IF(e.acerto, 'acerto', 'mês') AS acerto,
-        e.valor
-    FROM
-        espelho e
-        INNER JOIN lançamento l ON e.id_lançamento = l.id_lançamento
-    WHERE
-        e.período = :year_month
-    ORDER BY
-        e.acerto DESC
+SELECT
+    l.lançamento,
+    e.período,
+    IF(e.acerto, 'acerto', 'mês') AS acerto,
+    e.valor
+FROM
+    espelho e
+    INNER JOIN lançamento l ON e.id_lançamento = l.id_lançamento
+WHERE
+    e.período = :year_month
+ORDER BY
+    e.acerto DESC
 """
 
 year_month: int = 202501
@@ -127,17 +127,17 @@ print(df_mes)
 # %%
 # exibir o gráfico do total de mês a mês para o ano atual
 """
-    SELECT
-        l.lançamento,
-        e.período,
-        IF(e.acerto, 'acerto', 'mês') AS acerto,
-        e.valor
-    FROM
-        espelho e
-        INNER JOIN lançamento l ON e.id_lançamento = l.id_lançamento
-    WHERE
-        CAST(e.período AS CHAR(6)) LIKE ':year%' -- PostgreSQL
-        -- e.período LIKE ':year%' -- MySQL
+SELECT
+    l.lançamento,
+    e.período,
+    IF(e.acerto, 'acerto', 'mês') AS acerto,
+    e.valor
+FROM
+    espelho e
+    INNER JOIN lançamento l ON e.id_lançamento = l.id_lançamento
+WHERE
+    CAST(e.período AS CHAR(6)) LIKE ':year%' -- PostgreSQL
+    -- e.período LIKE ':year%' -- MySQL
 """
 
 year: int = 2025
@@ -166,17 +166,17 @@ print(df_ano)
 # %%
 # resumos totais anuais
 """
-    SELECT
-        CAST(LEFT(CAST(período AS CHAR(6)), 4) AS INT) AS ano, -- PostgreSQL
-        -- SUBSTR(período, 1, 4) * 1 AS ano, -- MySQL
-        'mês ' || RIGHT(CAST(período AS CHAR(6)), 2) AS mes, -- PostgreSQL
-        -- CONCAT('mês ', SUBSTR(período, 5)) AS mes, -- MySQL
-        SUM(valor) AS valor
-    FROM
-        espelho
-    GROUP BY
-        ano,
-        mes
+SELECT
+    CAST(LEFT(CAST(período AS CHAR(6)), 4) AS INT) AS ano, -- PostgreSQL
+    -- SUBSTR(período, 1, 4) * 1 AS ano, -- MySQL
+    'mês ' || RIGHT(CAST(período AS CHAR(6)), 2) AS mes, -- PostgreSQL
+    -- CONCAT('mês ', SUBSTR(período, 5)) AS mes, -- MySQL
+    SUM(valor) AS valor
+FROM
+    espelho
+GROUP BY
+    ano,
+    mes
 """
 
 df_anuais: pd.DataFrame = joints[["período", "valor"]].copy()

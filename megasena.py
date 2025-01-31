@@ -96,10 +96,10 @@ print(pd.DataFrame(mega_copy)) if len(pd.DataFrame(mega_copy)) != 0 \
 
 # %%
 """
-    SELECT * FROM megasena WHERE dt_sorteio IN (
-        SELECT MAX(dt_sorteio) FROM megasena GROUP BY YEAR(dt_sorteio)
-            HAVING YEAR(dt_sorteio) <> YEAR(CURRENT_DATE)
-    )
+SELECT * FROM megasena WHERE dt_sorteio IN (
+    SELECT MAX(dt_sorteio) FROM megasena GROUP BY YEAR(dt_sorteio)
+        HAVING YEAR(dt_sorteio) <> YEAR(CURRENT_DATE)
+)
 """
 
 df_mega_da_virada = megasena.copy()
@@ -107,9 +107,9 @@ df_mega_da_virada = megasena.copy()
 df_mega_da_virada["dt_sorteio"] = pd.to_datetime(df_mega_da_virada["dt_sorteio"], format="%d/%m/%Y")
 df_mega_da_virada["ano"] = df_mega_da_virada["dt_sorteio"].dt.year
 
-df_mega_da_virada = df_mega_da_virada[df_mega_da_virada['dt_sorteio']. \
-    isin(df_mega_da_virada[df_mega_da_virada['ano'] != pd.Timestamp.now().year]. \
-         groupby('ano')['dt_sorteio'].transform('max'))].reset_index(drop=True)
+df_mega_da_virada = df_mega_da_virada[df_mega_da_virada["dt_sorteio"]. \
+    isin(df_mega_da_virada[df_mega_da_virada["ano"] != pd.Timestamp.now().year]. \
+         groupby(["ano"])["dt_sorteio"].transform("max"))].reset_index(drop=True)
 
 df_mega_da_virada["ano"] = df_mega_da_virada["dt_sorteio"].dt.strftime("%d/%m/%Y")
 
