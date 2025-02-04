@@ -71,7 +71,6 @@ counts: pd.Series = unibb["nm_curso"].value_counts()
 print(counts)
 
 filtered_courses: pd.Index = counts[counts > 1].index
-print(filtered_courses)
 
 print(unibb[unibb["nm_curso"].isin(filtered_courses)] \
       .rename(columns=dict(id_curso="Código", nm_curso="Curso", hr_curso="Horas")) \
