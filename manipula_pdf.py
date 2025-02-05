@@ -1,6 +1,6 @@
 import PyPDF2
 
-caminho_pdf = r"C:\Users\F8719981\Downloads\CARMEN.pdf"  # arquivo PDF original
+caminho_pdf = "~/Downloads/CARMEN.pdf"  # arquivo PDF original
 
 with open(caminho_pdf, "rb") as pdf_original:
     leitor_pdf = PyPDF2.PdfReader(pdf_original)
@@ -10,10 +10,9 @@ with open(caminho_pdf, "rb") as pdf_original:
 
     for numero_pagina in range(len(leitor_pdf.pages)):
         if numero_pagina > pagina_para_deletar:
-            pagina = leitor_pdf.pages[numero_pagina]
-            escritor_pdf.add_page(pagina)
+            escritor_pdf.add_page(leitor_pdf.pages[numero_pagina])
 
-    with open(r"C:\Users\F8719981\Downloads\CARMEN.pdf", "wb") as novo_pdf:  # arquivo PDF atualizado
+    with open("~/Downloads/CARMEN_new.pdf", "wb") as novo_pdf:  # arquivo PDF atualizado
         escritor_pdf.write(novo_pdf)
 
 print("Página atualizada com sucesso!")
