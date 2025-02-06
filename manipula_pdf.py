@@ -1,18 +1,37 @@
 import PyPDF2
 
-caminho_pdf = "~/Downloads/CARMEN.pdf"  # arquivo PDF original
+# file_pdf = r"C:\Users\F8719981\Downloads\CARMEN.pdf"
+#
+# with open(caminho_pdf, "rb") as pdf_origin:
+#     reader_pdf = PyPDF2.PdfReader(pdf_origin)
+#     writer_pdf = PyPDF2.PdfWriter()
+#
+#     page_being_deleted = 3  # página a ser deletada, começando com 0
+#
+#     for page in range(len(leitor_pdf.pages)):
+#         if page > page_being_deleted:
+#             writer_pdf.add_page(reader_pdf.pages[page])
+#
+#     with open(r"C:\Users\F8719981\Downloads\CARMEN 2.pdf", "wb") as new_pdf:
+#         writer_pdf.write(new_pdf)
+#
+# print("Página atualizada com sucesso!")
 
-with open(caminho_pdf, "rb") as pdf_original:
-    leitor_pdf = PyPDF2.PdfReader(pdf_original)
-    escritor_pdf = PyPDF2.PdfWriter()
+# -----------------------------------------------------------------------------------------
 
-    pagina_para_deletar = 3  # página a ser deletada, começando com 0
+path_pdf = [
+    r"C:\Users\F8719981\Downloads\CARMEN 1.pdf",
+    r"C:\Users\F8719981\Downloads\CARMEN 2.pdf"
+]
 
-    for numero_pagina in range(len(leitor_pdf.pages)):
-        if numero_pagina > pagina_para_deletar:
-            escritor_pdf.add_page(leitor_pdf.pages[numero_pagina])
+writer_pdf = PyPDF2.PdfWriter()
 
-    with open("~/Downloads/CARMEN_new.pdf", "wb") as novo_pdf:  # arquivo PDF atualizado
-        escritor_pdf.write(novo_pdf)
+for pdf in path_pdf:
+    reader_pdf = PyPDF2.PdfReader(pdf)
+    for page in range(len(reader_pdf.pages)):
+        writer_pdf.add_page(reader_pdf.pages[page])
 
-print("Página atualizada com sucesso!")
+with open(r"C:\Users\F8719981\Downloads\CARMEN - PDF combinados.pdf", "wb") as pdf_combined:
+    writer_pdf.write(pdf_combined)
+
+print("Arquivos PDF combinados com sucesso!")
