@@ -1,6 +1,6 @@
 import PyPDF2
 
-# file_pdf = r"C:\Users\F8719981\Downloads\CARMEN.pdf"
+# file_pdf = "~/Downloads/CARMEN.pdf"
 #
 # with open(caminho_pdf, "rb") as pdf_origin:
 #     reader_pdf = PyPDF2.PdfReader(pdf_origin)
@@ -12,16 +12,16 @@ import PyPDF2
 #         if page > page_being_deleted:
 #             writer_pdf.add_page(reader_pdf.pages[page])
 #
-#     with open(r"C:\Users\F8719981\Downloads\CARMEN 2.pdf", "wb") as new_pdf:
+#     with open("~/Downloads/CARMEN 2.pdf", "wb") as new_pdf:
 #         writer_pdf.write(new_pdf)
 #
 # print("Página atualizada com sucesso!")
 
-# -----------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------
 
 path_pdf = [
-    r"C:\Users\F8719981\Downloads\CARMEN 1.pdf",
-    r"C:\Users\F8719981\Downloads\CARMEN 2.pdf"
+    "~/Downloads/CARMEN 1.pdf",
+    "~/Downloads/CARMEN 2.pdf"
 ]
 
 writer_pdf = PyPDF2.PdfWriter()
@@ -31,7 +31,7 @@ for pdf in path_pdf:
     for page in range(len(reader_pdf.pages)):
         writer_pdf.add_page(reader_pdf.pages[page])
 
-with open(r"C:\Users\F8719981\Downloads\CARMEN - PDF combinados.pdf", "wb") as pdf_combined:
+with open("~/Downloads/CARMEN - PDF combinados.pdf", "wb") as pdf_combined:
     writer_pdf.write(pdf_combined)
 
 print("Arquivos PDF combinados com sucesso!")
