@@ -1,6 +1,7 @@
 # %%
 import locale
 import os
+from datetime import date
 
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -18,6 +19,9 @@ pd.set_option("display.float_format", lambda val: f"R$ {locale.currency(val=val,
 pd.set_option('display.max_columns', None)
 
 engine: sa.Engine = sa.engine.create_engine(url=os.getenv("URL_AIVEN_PG"))
+
+year: int = date.today().year
+year_month: int = year*100 + date.today().month
 
 # %%
 stmt: str = """
@@ -73,9 +77,7 @@ WHERE LEFT(CAST(período AS CHAR(6)), 4) = CAST(EXTRACT(YEAR FROM CURRENT_DATE) 
 GROUP BY período
 """
 
-year: int = 2025
-
-dict_months = {
+dict_months: dict[int, str] = {
     int(f"{year}01"): f"janeiro de {year}",
     int(f"{year}02"): f"fevereiro de {year}",
     int(f"{year}03"): f"março de {year}",
@@ -115,8 +117,6 @@ ORDER BY
     e.acerto DESC
 """
 
-year_month: int = 202501
-
 df_mes: pd.DataFrame = joints[joints["período"].eq(year_month)].copy() \
     .sort_values(["acerto", "valor"], ascending=False).reset_index(drop=True)
 df_mes["período"] = pd.to_datetime(df_mes["período"], format="%Y%m").dt.strftime("%B de %Y")
@@ -139,8 +139,6 @@ WHERE
     CAST(e.período AS CHAR(6)) LIKE ':year%' -- PostgreSQL
     -- e.período LIKE ':year%' -- MySQL
 """
-
-year: int = 2025
 
 df_ano: pd.DataFrame = joints.copy()
 df_ano["ano"] = pd.to_datetime(df_ano["período"], format="%Y%m").dt.year
@@ -196,8 +194,6 @@ print(df_anuais)
 # exibir o gráfico do total de mês a mês para o ano atual
 plt.figure(figsize=(16, 6))
 plt.style.use("ggplot")
-
-year: int = 2025
 
 ax: plt.Axes = sns.barplot(data=df_anuais.loc[[year], df_anuais.columns[:-2]])
 ax.set_title(f"Espelho {year}", loc="center", fontweight="bold", fontsize=12)
