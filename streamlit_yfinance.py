@@ -1,16 +1,10 @@
 from datetime import timedelta
-from dotenv import load_dotenv
-import os
+
 import pandas as pd
 import streamlit as st
-import sqlalchemy as sa
 import yfinance as yf
 
 st.set_page_config(page_title="Página Principal", layout="wide")
-
-load_dotenv()
-
-engine = sa.create_engine(os.getenv("URL_MYSQL"))
 
 
 @st.cache_data
@@ -28,7 +22,9 @@ O gráfico abaixo representa a evolução do preço das ações ao longo dos ano
 """)
 
 st.sidebar.header("Filtros")
+
 list_tickers = st.sidebar.multiselect(label="Escolha as ações para visualizar:", options=data.columns)
+
 if list_tickers:
     data = data[list_tickers]
     if len(list_tickers) == 1:
