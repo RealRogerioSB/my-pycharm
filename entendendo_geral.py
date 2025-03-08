@@ -305,8 +305,8 @@ black_white.show()
 
 # %%
 # PDF merger
-import PyPDF2
 import os
+import PyPDF2
 
 merger = PyPDF2.PdfMerger(strict=False)
 

@@ -16,7 +16,7 @@ locale.setlocale(category=locale.LC_MONETARY, locale="pt_BR.UTF-8")
 
 pd.set_option("display.expand_frame_repr", False)
 pd.set_option("display.float_format", lambda val: f"R$ {locale.currency(val=val, symbol=False, grouping=True)}")
-pd.set_option('display.max_columns', None)
+pd.set_option("display.max_columns", None)
 
 engine: sa.Engine = sa.engine.create_engine(url=os.getenv("URL_AIVEN_PG"))
 
