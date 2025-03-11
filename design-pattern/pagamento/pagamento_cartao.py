@@ -1,4 +1,5 @@
-from pagamento.pagamento import Pagamento
+from pagamento import Pagamento
+
 
 class PagamentoCartao(Pagamento):
     def processar(self, valor):

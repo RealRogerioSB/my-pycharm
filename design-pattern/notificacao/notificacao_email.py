@@ -1,4 +1,5 @@
-from notificacao.notificacao import Notificacao
+from notificacao import Notificacao
+
 
 class NotificacaoEmail(Notificacao):
     def enviar_notificacao(self, cliente, mensagem):

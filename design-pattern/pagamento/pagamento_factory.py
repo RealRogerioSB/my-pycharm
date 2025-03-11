@@ -1,5 +1,6 @@
-from pagamento.pagamento_pix import PagamentoPIX
-from pagamento.pagamento_cartao import PagamentoCartao
+from pagamento_pix import PagamentoPIX
+from pagamento_cartao import PagamentoCartao
+
 
 class PagamentoFactory:
     @staticmethod

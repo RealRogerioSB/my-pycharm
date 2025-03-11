@@ -1,5 +1,6 @@
-from notificacao.notificacao_email import NotificacaoEmail
-from notificacao.notificacao_sms import NotificacaoSMS
+from notificacao_email import NotificacaoEmail
+from notificacao_sms import NotificacaoSMS
+
 
 class NotificacaoFacade:
     def __init__(self):
