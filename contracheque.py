@@ -52,7 +52,7 @@ print("Tabela 'espelho' criada com sucesso!")
 
 # %%
 # inserir novos registros para a tabela espelho
-row_inserted: int = pd.read_csv("./src/espelho.csv", sep=",", encoding="utf-8-sig") \
+row_inserted: int = pd.read_csv("src/espelho.csv", sep=",", encoding="utf-8-sig") \
     .to_sql(name="espelho", con=engine, if_exists="append", index=False)
 print(f"Foram {row_inserted} lançamentos inseridos com sucesso.")
 
