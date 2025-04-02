@@ -1,6 +1,6 @@
 # mais informações: https://mailtrap.io/blog/python-send-email-gmail/
-import smtplib
 from email.mime.text import MIMEText
+from smtplib import SMTPException, SMTP_SSL
 
 subject = "Teste de envio de E-mail"
 body = "Esse é o corpo de mensagem de texto."
@@ -15,13 +15,13 @@ def send_email(sub, bod, sen, pas, rec):
     msg["From"] = sen
     msg["To"] = ", ".join(rec)
 
-    with smtplib.SMTP_SSL("smtp.mail.me.com", 587) as smtp_server:
+    with SMTP_SSL("smtp.mail.me.com", 587) as smtp_server:
         smtp_server.ehlo()
         smtp_server.login(sen, pas)
 
         try:
             smtp_server.sendmail(sen, rec, msg.as_string())
-        except smtplib.SMTPException as e:
+        except SMTPException as e:
             print(e)
         except Exception as e:
             print(e)
