@@ -1,4 +1,5 @@
 .idea
+.streamlit/secrets.toml
 .venv
 .env
 main.ipynb
