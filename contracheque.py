@@ -26,8 +26,7 @@ year_month: int = year*100 + date.today().month
 # %%
 stmt: str = """
 CREATE TABLE IF NOT EXISTS lançamento (
-    id_lançamento SERIAL PRIMARY KEY, -- PostgreSQL
-    -- id_lançamento INTEGER AUTO_INCREMENT PRIMARY KEY, -- MySQL
+    id_lançamento SERIAL PRIMARY KEY,
     lançamento VARCHAR(60) NOT NULL
 )
 """
@@ -38,8 +37,7 @@ print("Tabela 'lançamento' criada com sucesso!")
 # %%
 stmt: str = """
 CREATE TABLE IF NOT EXISTS espelho (
-    id SERIAL PRIMARY KEY, -- PostgreSQL
-    -- id INTEGER AUTO_INCREMENT PRIMARY KEY, -- MySQL
+    id SERIAL PRIMARY KEY,
     id_lançamento INTEGER NOT NULL,
     período INTEGER NOT NULL,
     acerto BOOLEAN DEFAULT FALSE NOT NULL,
@@ -72,8 +70,7 @@ print(release.rename(columns=dict(id_lançamento="Código", lançamento="Lançam
 """
 SELECT período AS Período, SUM(valor) AS Total
 FROM espelho
-WHERE LEFT(CAST(período AS CHAR(6)), 4) = CAST(EXTRACT(YEAR FROM CURRENT_DATE) AS CHAR(4)) -- PostgreSQL
--- WHERE SUBSTR(período, 1, 4) = EXTRACT(YEAR FROM CURDATE()) -- MySQL
+WHERE período / 100 = EXTRACT(YEAR FROM CURRENT_DATE)
 GROUP BY período
 """
 
@@ -103,18 +100,10 @@ print(df_year_month)
 # %%
 # exibir a tabela espelho para o mês atual
 """
-SELECT
-    l.lançamento,
-    e.período,
-    IF(e.acerto, 'acerto', 'mês') AS acerto,
-    e.valor
-FROM
-    espelho e
-    INNER JOIN lançamento l ON e.id_lançamento = l.id_lançamento
-WHERE
-    e.período = :year_month
-ORDER BY
-    e.acerto DESC
+SELECT l.lançamento, e.período, e.acerto, e.valor
+FROM espelho e INNER JOIN lançamento l ON e.id_lançamento = l.id_lançamento
+WHERE e.período = (SELECT MAX(período) FROM espelho)
+ORDER BY e.acerto DESC, e.valor DESC
 """
 
 df_mes: pd.DataFrame = joints[joints["período"].eq(year_month)].copy() \
@@ -127,17 +116,10 @@ print(df_mes)
 # %%
 # exibir o gráfico do total de mês a mês para o ano atual
 """
-SELECT
-    l.lançamento,
-    e.período,
-    IF(e.acerto, 'acerto', 'mês') AS acerto,
-    e.valor
-FROM
-    espelho e
-    INNER JOIN lançamento l ON e.id_lançamento = l.id_lançamento
-WHERE
-    CAST(e.período AS CHAR(6)) LIKE ':year%' -- PostgreSQL
-    -- e.período LIKE ':year%' -- MySQL
+SELECT l.lançamento, e.período, e.acerto, e.valor
+FROM espelho e INNER JOIN lançamento l ON e.id_lançamento = l.id_lançamento
+WHERE e.período / 100 = :year
+ORDER BY e.período, e.acerto DESC, e.valor DESC
 """
 
 df_ano: pd.DataFrame = joints.copy()
@@ -164,17 +146,10 @@ print(df_ano)
 # %%
 # resumos totais anuais
 """
-SELECT
-    CAST(LEFT(CAST(período AS CHAR(6)), 4) AS INT) AS ano, -- PostgreSQL
-    -- SUBSTR(período, 1, 4) * 1 AS ano, -- MySQL
-    'mês ' || RIGHT(CAST(período AS CHAR(6)), 2) AS mes, -- PostgreSQL
-    -- CONCAT('mês ', SUBSTR(período, 5)) AS mes, -- MySQL
-    SUM(valor) AS valor
-FROM
-    espelho
-GROUP BY
-    ano,
-    mes
+SELECT período / 100 AS ano, 'mês ' || período % 100 AS mês, SUM(valor) AS valor
+FROM espelho
+GROUP BY período
+ORDER BY período
 """
 
 df_anuais: pd.DataFrame = joints[["período", "valor"]].copy()
@@ -203,3 +178,91 @@ for mes in range(12):
     ax.bar_label(ax.containers[mes], fmt=lambda i: locale.currency(val=i, symbol=False, grouping=True), fontsize=10)
 
 plt.show()
+
+'''
+import locale
+from datetime import date
+
+import pandas as pd
+import streamlit as st
+from streamlit.connections import SQLConnection
+
+st.set_page_config(page_title="Contracheque BB", layout="wide")
+
+locale.setlocale(locale.LC_ALL, "pt_BR.UTF-8")
+
+engine: SQLConnection = st.connection(name="AIVEN_PG", type=SQLConnection)
+
+st.title("💰Contracheque BB")
+
+
+@st.cache_data(show_spinner="**Obtendo os dados, aguarde...**")
+def load_mensal(year: int, month: int) -> pd.DataFrame:
+    return engine.query(
+        sql="""
+            select t2.lançamento, t1.período, t1.acerto, t1.valor
+            from espelho t1
+                inner join lançamento t2
+                    on t2.id_lançamento = t1.id_lançamento
+            where t1.período / 100 = :year and t1.período % 100 = :month
+            order by t1.período, t1.acerto DESC, t1.valor DESC
+        """,
+        show_spinner=False,
+        ttl=3600,
+        params=dict(year=year, month=month),
+    )
+
+
+@st.cache_data(show_spinner="**Obtendo os dados, aguarde...**")
+def load_anual(year: int) -> pd.DataFrame:
+    return engine.query(
+        sql="""
+            select t2.lançamento, t1.período, t1.acerto, t1.valor
+            from espelho t1
+                inner join lançamento t2
+                    on t2.id_lançamento = t1.id_lançamento
+            where t1.período / 100 = :year
+            order by t1.período, t1.acerto DESC, t1.valor DESC
+        """,
+        show_spinner=False,
+        ttl=3600,
+        params=dict(year=year),
+    )
+
+
+tab1, tab2 = st.tabs(["**Mensal**", "**Anual**"])
+
+with tab1:
+    col1, col2 = st.columns([1, 2], border=True)
+
+    with col1:
+        mes = st.slider(label="**Mês:**", min_value=1, max_value=12, value=date.today().month)
+
+        ano = st.columns(3)[0].selectbox(label="**Ano:**", options=range(date.today().year, 2004, -1))
+
+    with col2:
+        df1 = load_mensal(ano, mes)
+        df1.columns = [str(column).capitalize() for column in df1.columns]
+        df1["Período"] = pd.to_datetime(df1["Período"], format="%Y%m").dt.strftime("%B de %Y")
+
+        st.data_editor(
+            data=df1, hide_index=True, use_container_width=True,
+            column_config={"Valor": st.column_config.NumberColumn(format="dollar")}
+        )
+
+with tab2:
+    col1, col2 = st.columns([1, 2], border=True)
+
+    with col1:
+        anual = st.slider(label="**Ano:**", min_value=2005, max_value=date.today().year, value=date.today().year)
+
+    with col2:
+        df2 = load_anual(anual)
+        df2.columns = [str(column).capitalize() for column in df2.columns]
+        df2["Período"] = pd.to_datetime(df2["Período"], format="%Y%m").dt.strftime("%B de %Y")
+
+        st.data_editor(
+            data=df2, hide_index=True, use_container_width=True,
+            column_config={"Valor": st.column_config.NumberColumn(format="dollar")}
+        )
+'''
