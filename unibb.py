@@ -1,78 +1,119 @@
-# %%
-import os
+# CREATE TABLE IF NOT EXISTS unibb (
+#     id SERIAL PRIMARY KEY,
+#     id_curso INTEGER NOT NULL,
+#     nm_curso VARCHAR(100) NOT NULL,
+#     hr_curso INTEGER NOT NULL
+# )
 
 import pandas as pd
-import sqlalchemy as sa
-from dotenv import load_dotenv
+import streamlit as st
+from streamlit.connections import SQLConnection
 
-load_dotenv()
+st.set_page_config(page_title="Cursos da UniBB")
 
-engine: sa.Engine = sa.engine.create_engine(os.getenv("URL_AIVEN_PG"))
+engine = st.connection(name="AIVEN_PG", type=SQLConnection)
 
-unibb = pd.read_sql(sql=sa.text("SELECT * FROM unibb"), con=engine)
+if "offset" not in st.session_state:
+    st.session_state["offset"] = 0
 
-# %%
-stmt: str = """
-CREATE TABLE IF NOT EXISTS unibb (
-    id SERIAL PRIMARY KEY,
-    id_curso INTEGER NOT NULL,
-    nm_curso VARCHAR(100) NOT NULL,
-    hr_curso INTEGER NOT NULL
+
+@st.cache_data(show_spinner="⏳Obtendo os dados, aguarde...")
+def load_data() -> pd.DataFrame:
+    return engine.query(
+        sql="""
+            SELECT id_curso, nm_curso, hr_curso
+            FROM unibb
+            ORDER BY id_curso
+        """,
+        show_spinner=False
+    )
+
+
+def rows_page(df: pd.DataFrame, offset: int) -> pd.DataFrame:
+    return df.iloc[offset:offset + 10]
+
+
+unibb = load_data()
+
+col = st.columns([4.5, 0.2, 1.475, 0.025])
+
+with col[0]:
+    st.markdown("#### Lista de Cursos da UniBB")
+
+with col[2]:
+    side = st.columns(4)
+
+    with side[0]:
+        if st.button("⏮"):
+            st.session_state["offset"] = 0
+            rows_page(unibb, st.session_state["offset"])
+            st.rerun()
+
+    with side[1]:
+        if st.button("️◀"):
+            st.session_state["offset"] = max(0, st.session_state["offset"] - 10)
+            rows_page(unibb, st.session_state["offset"])
+            st.rerun()
+
+    with side[2]:
+        if st.button("▶"):
+            st.session_state["offset"] = min(len(unibb) - 10, st.session_state["offset"] + 10)
+            rows_page(unibb, st.session_state["offset"])
+            st.rerun()
+
+    with side[3]:
+        if st.button("⏭"):
+            st.session_state["offset"] = len(unibb) - 10
+            rows_page(unibb, st.session_state["offset"])
+            st.rerun()
+
+st.data_editor(
+    data=rows_page(unibb, st.session_state["offset"]),
+    hide_index=True,
+    column_config={
+        "id_curso": st.column_config.NumberColumn(label="Código", width="small"),
+        "nm_curso": st.column_config.TextColumn(label="Curso", width="large"),
+        "hr_curso": st.column_config.NumberColumn(label="Horas", width="small"),
+    },
+    key="default",
+    num_rows="dynamic",
+    row_height=25,
 )
-"""
-with engine.begin() as cnx:
-    cnx.execute(sa.text(stmt))
 
-print("Tabela criada com sucesso.\n")
+if st.session_state.default.get('added_rows', 0):
+    st.caption(st.session_state["default"]["added_rows"])
 
-# %%
-try:
-    df_new: pd.DataFrame = pd.read_csv("./src/unibb.csv", encoding="utf-8-sig")
-    df_new = df_new[df_new["save"].eq(1)][["id_curso", "nm_curso", "hr_curso"]]
+if st.session_state.default.get('edited_rows', 0):
+    st.caption(st.session_state["default"]["edited_rows"])
 
-    rows_inserted: int = df_new.to_sql(name="unibb", con=engine, if_exists="append", index=False)
+if st.session_state.default.get('deleted_rows', 0):
+    st.caption(st.session_state["default"]["deleted_rows"])
 
-    print(f"Foram {rows_inserted} cursos inseridos com sucesso.")
 
-except FileNotFoundError:
-    print("Erro ao localizar o arquivo .CSV...")
+@st.cache_data(show_spinner="⏳Obtendo os dados, aguarde...")
+def load_duplicity() -> pd.DataFrame:
+    return engine.query(
+        sql="""
+            SELECT *
+            FROM unibb
+            WHERE nm_curso IN (SELECT nm_curso FROM unibb GROUP BY nm_curso HAVING COUNT(nm_curso) > 1)
+            ORDER BY nm_curso, id_curso
+        """,
+        show_spinner=False
+    )
 
-except UnicodeEncodeError:
-    print("Erro ao decodificar o arquivo .CSV...")
 
-else:
-    df_deleted: pd.DataFrame = pd.read_csv("./src/unibb.csv", encoding="utf-8-sig")
-    df_deleted[df_deleted["save"].ne(1)].to_csv("./src/unibb.csv", index=False, encoding="utf-8-sig")
+st.markdown("#### Lista de Cursos Duplicados")
 
-    print("Cursos atualizados com sucesso.\n")
-
-# %% lista de cursos com id ordenado
-"""SELECT id_curso AS Código, nm_curso AS Curso, hr_curso AS Horas FROM unibb ORDER BY id"""
-
-print(unibb.sort_values(by=["id"]) \
-      .rename(columns=dict(id_curso="Código", nm_curso="Curso", hr_curso="Horas")) \
-      .drop(["id"], axis=1).reset_index(drop=True))
-
-# %% lista de cursos com id_curso ordenado
-"""SELECT id_curso AS Código, nm_curso AS Curso, hr_curso AS Horas FROM unibb ORDER BY id_curso"""
-
-print(unibb.sort_values(by=["id_curso"]) \
-      .rename(columns=dict(id_curso="Código", nm_curso="Curso", hr_curso="Horas")) \
-      .drop(["id"], axis=1).reset_index(drop=True))
-
-# %% lista de cursos duplicados
-"""
-SELECT id_curso AS Código, nm_curso AS Curso, hr_curso AS Horas FROM unibb WHERE nm_curso IN (
-    SELECT nm_curso FROM unibb GROUP BY nm_curso HAVING COUNT(nm_curso) > 1
-) ORDER BY nm_curso, id_curso
-"""
-
-counts: pd.Series = unibb["nm_curso"].value_counts()
-print(counts)
-
-filtered_courses: pd.Index = counts[counts > 1].index
-
-print(unibb[unibb["nm_curso"].isin(filtered_courses)] \
-      .rename(columns=dict(id_curso="Código", nm_curso="Curso", hr_curso="Horas")) \
-      .drop(["id"], axis=1).sort_values(by=["Curso", "Código"]) \
-      .reset_index(drop=True))
+st.data_editor(
+    data=load_duplicity(),
+    hide_index=True,
+    column_config={
+        "id": st.column_config.NumberColumn(label="Index", width="small"),
+        "id_curso": st.column_config.NumberColumn(label="Código", width="small"),
+        "nm_curso": st.column_config.TextColumn(label="Curso", width="large"),
+        "hr_curso": st.column_config.NumberColumn(label="Horas", width="small"),
+    },
+    key="duplo",
+    row_height=25,
+)
