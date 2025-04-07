@@ -11,14 +11,14 @@ from streamlit.connections import SQLConnection
 
 st.set_page_config(page_title="Cursos da UniBB")
 
-engine = st.connection(name="AIVEN_PG", type=SQLConnection)
+engine = st.connection(name="AIVEN-PG", type=SQLConnection)
 
 if "offset" not in st.session_state:
     st.session_state["offset"] = 0
 
 
 @st.cache_data(show_spinner="⏳Obtendo os dados, aguarde...")
-def load_data() -> pd.DataFrame:
+def load_unibb() -> pd.DataFrame:
     return engine.query(
         sql="""
             SELECT id_curso, nm_curso, hr_curso
@@ -33,7 +33,7 @@ def rows_page(df: pd.DataFrame, offset: int) -> pd.DataFrame:
     return df.iloc[offset:offset + 10]
 
 
-unibb = load_data()
+unibb = load_unibb()
 
 col = st.columns([4.5, 0.2, 1.475, 0.025])
 
@@ -70,10 +70,11 @@ with col[2]:
 st.data_editor(
     data=rows_page(unibb, st.session_state["offset"]),
     hide_index=True,
+    height=313,
     column_config={
-        "id_curso": st.column_config.NumberColumn(label="Código", width="small"),
-        "nm_curso": st.column_config.TextColumn(label="Curso", width="large"),
-        "hr_curso": st.column_config.NumberColumn(label="Horas", width="small"),
+        "id_curso": st.column_config.NumberColumn(label="Código", required=True, width="small", default=100000),
+        "nm_curso": st.column_config.TextColumn(label="Curso", required=True, width="large", default="nome-curso"),
+        "hr_curso": st.column_config.NumberColumn(label="Horas", required=True, width="small", default=0),
     },
     key="default",
     num_rows="dynamic",
@@ -81,13 +82,16 @@ st.data_editor(
 )
 
 if st.session_state.default.get('added_rows', 0):
-    st.caption(st.session_state["default"]["added_rows"])
+    st.markdown("**Adição detectada:**")
+    st.json(st.session_state["default"]["added_rows"])
 
 if st.session_state.default.get('edited_rows', 0):
-    st.caption(st.session_state["default"]["edited_rows"])
+    st.markdown("**Edição detectada:**")
+    st.json(st.session_state["default"]["edited_rows"])
 
 if st.session_state.default.get('deleted_rows', 0):
-    st.caption(st.session_state["default"]["deleted_rows"])
+    st.markdown("**Remoção detectada:**")
+    st.json(st.session_state["default"]["deleted_rows"])
 
 
 @st.cache_data(show_spinner="⏳Obtendo os dados, aguarde...")
@@ -108,6 +112,7 @@ st.markdown("#### Lista de Cursos Duplicados")
 st.data_editor(
     data=load_duplicity(),
     hide_index=True,
+    height=188,
     column_config={
         "id": st.column_config.NumberColumn(label="Index", width="small"),
         "id_curso": st.column_config.NumberColumn(label="Código", width="small"),
