@@ -5,6 +5,9 @@ import streamlit as st
 
 locale.setlocale(locale.LC_ALL, "pt_BR.UTF-8")
 
+if "xlsx_file" not in st.session_state:
+    st.session_state["xlsx_file"] = None
+
 st.set_page_config(layout="wide")
 
 minhas_apostas: list[str] = [
@@ -30,16 +33,16 @@ minhas_apostas: list[str] = [
 
 
 @st.cache_data(show_spinner="Obtendo os dados, aguarde...")
-def load_megasena() -> pd.DataFrame:
-    df: pd.DataFrame = pd.read_excel(io="~/Downloads/mega-Sena.xlsx", engine="openpyxl")
+def load_megasena(xlsx_file: str) -> pd.DataFrame:
+    df: pd.DataFrame = pd.read_excel(io=xlsx_file, engine="openpyxl")
 
-    for col in df.columns[2:8]:
-        df[col] = df[col].astype(str).str.zfill(2)
+    for coluna in df.columns[2:8]:
+        df[coluna] = df[coluna].astype(str).str.zfill(2)
 
     df["bolas"] = df[df.columns[2:8]].apply(" ".join, axis=1)
 
-    for col in ["Rateio 6 acertos", "Rateio 5 acertos", "Rateio 4 acertos"]:
-        df[col] = df[col].astype(str).str.replace(r"\D", "", regex=True).astype(float) / 100
+    for coluna in ["Rateio 6 acertos", "Rateio 5 acertos", "Rateio 4 acertos"]:
+        df[coluna] = df[coluna].astype(str).str.replace(r"\D", "", regex=True).astype(float) / 100
 
     df = df[["Concurso", "Data do Sorteio", "bolas", "Ganhadores 6 acertos", "Rateio 6 acertos",
              "Ganhadores 5 acertos", "Rateio 5 acertos", "Ganhadores 4 acertos", "Rateio 4 acertos"]]
@@ -53,126 +56,137 @@ def load_megasena() -> pd.DataFrame:
 
     df = df.reset_index().sort_values(by=["id_sorteio", "dt_sorteio"], ignore_index=True)
 
+    df["dt_sorteio"] = pd.to_datetime(df["dt_sorteio"], format="%d/%m/%Y")
+
     return df
 
 
 st.title("Megasena")
 
-megasena: pd.DataFrame = load_megasena()
+st.session_state["xlsx_file"] = st.columns(3)[0].file_uploader("Importar", type="xlsx", label_visibility="hidden")
 
-tab1, tab2, tab3, tab4 = st.tabs(["**Minhas apostas**", "**Sorteios da Mega-Sena**",
-                                  "**Sua aposta da Mega-Sena**", "**Mega-Sena da Virada**"])
+if st.session_state["xlsx_file"] and st.session_state["xlsx_file"].name == "Mega-Sena.xlsx":
+    megasena: pd.DataFrame = load_megasena(st.session_state["xlsx_file"])
 
-with tab1:
-    minhas = [f"Aposta n.° {x + 1:02d} ➟ {" - ".join(aposta.split())}" for x, aposta in enumerate(minhas_apostas)]
+    tab1, tab2, tab3, tab4 = st.tabs(["**Minhas apostas**", "**Sorteios da Mega-Sena**",
+                                      "**Sua aposta da Mega-Sena**", "**Mega-Sena da Virada**"])
 
-    st.columns(3)[0].dataframe(data=minhas, use_container_width=True, row_height=25,
-                 column_config={"value": st.column_config.TextColumn(label="Minhas Apostas")})
+    with tab1:
+        minhas = [f"Aposta n.° {x + 1:02d} ➟ {" - ".join(aposta.split())}" for x, aposta in enumerate(minhas_apostas)]
 
-with tab2:
-    col = st.columns([2, 1, 1])
+        st.columns(3)[0].dataframe(
+            data=minhas,
+            use_container_width=True,
+            row_height=25,
+            height=387,
+            column_config={"value": st.column_config.TextColumn(label="Minhas Apostas")}
+        )
 
-    with col[0]:
-        for r in range(6, 3, -1):
-            st.write(f"**Acerto de {r} bolas**")
+    with tab2:
+        col = st.columns([2, 1, 1])
 
-            mega_copy: dict[str: list] = {"id_sorteio": [], "dt_sorteio": [], "bolas": [], "apostas": []}
+        with col[0]:
+            for r in range(6, 3, -1):
+                st.write(f"**Acerto de {r} bolas**")
 
-            for row in megasena[["id_sorteio", "dt_sorteio", "bolas", f"acerto_{r}", f"rateio_{r}"]].copy() \
-                    .itertuples(index=False, name=None):
-                for aposta in minhas_apostas:
-                    bolas: list[str] = aposta.split()
+                mega_copy: dict[str: list] = {"id_sorteio": [], "dt_sorteio": [], "bolas": [], "apostas": []}
 
-                    match: list[str] = [bolas[x] for x in range(6) if bolas[x] in row[2]]
+                for row in megasena[["id_sorteio", "dt_sorteio", "bolas", f"acerto_{r}", f"rateio_{r}"]].copy() \
+                        .itertuples(index=False, name=None):
+                    for aposta in minhas_apostas:
+                        bolas: list[str] = aposta.split()
 
-                    if len(match) == r:
-                        mega_copy["id_sorteio"].append(row[0])
-                        mega_copy["dt_sorteio"].append(pd.to_datetime(row[1], format="%d/%m/%Y").strftime("%x (%a)"))
-                        mega_copy["bolas"].append(" ".join(match))
-                        mega_copy["apostas"].append(minhas_apostas.index(aposta) + 1)
+                        match: list[str] = [bolas[x] for x in range(6) if bolas[x] in row[2]]
+
+                        if len(match) == r:
+                            mega_copy["id_sorteio"].append(row[0])
+                            mega_copy["dt_sorteio"].append(row[1].strftime("%x (%a)"))
+                            mega_copy["bolas"].append(" ".join(match))
+                            mega_copy["apostas"].append(minhas_apostas.index(aposta) + 1)
+
+                st.dataframe(
+                    data=mega_copy,
+                    row_height=25,
+                    use_container_width=True,
+                    column_config={
+                        "id_sorteio": st.column_config.NumberColumn(label="Concurso", format="%04d"),
+                        "dt_sorteio": st.column_config.TextColumn(label="Data do Sorteio"),
+                        "bolas": st.column_config.ListColumn(label="Suas bolas acertadas"),
+                        "apostas": st.column_config.NumberColumn(label="Sua aposta n.°"),
+                    }
+                )
+
+    with tab3:
+        sua_aposta = st.columns(5)[0].text_input("Sua aposta:")
+
+        col = st.columns(3)
+
+        with col[0]:
+            if st.button("**Acertei?**", type="primary"):
+                if sua_aposta:
+                    with st.spinner("Obtendo as apostas, aguarde...", show_time=True):
+                        mega_copy2 = {"id_sorteio": [], "dt_sorteio": [], "bolas": [], "acertos": []}
+
+                        for row in megasena.copy().itertuples(index=False, name=None):
+                            match = [aposta for aposta in sua_aposta.split() if aposta in row[2]]
+
+                            if len(match) >= 4:
+                                mega_copy2["id_sorteio"].append(row[0])
+                                mega_copy2["dt_sorteio"].append(row[1].strftime("%x (%a)"))
+                                mega_copy2["bolas"].append(row[2])
+                                mega_copy2["acertos"].append(len(match))
+
+                        st.dataframe(
+                            data=mega_copy2,
+                            row_height=25,
+                            use_container_width=True,
+                            column_config={
+                                "id_sorteio": st.column_config.NumberColumn(label="Concurso", format="%04d"),
+                                "dt_sorteio": st.column_config.TextColumn(label="Data de Sorteio"),
+                                "bolas": st.column_config.ListColumn(label="Bolas Sorteadas"),
+                                "acertos": st.column_config.NumberColumn(label="Seus acertos"),
+                            }
+                        )
+
+                    st.button("**Recomeçar**", type="primary")
+                else:
+                    st.toast("**Preencha suas bolas!**")
+
+    with tab4:
+        # SELECT * FROM megasena WHERE dt_sorteio IN (
+        #     SELECT MAX(dt_sorteio) FROM megasena GROUP BY YEAR(dt_sorteio)
+        #         HAVING YEAR(dt_sorteio) <> YEAR(CURRENT_DATE)
+        # )
+        mega_da_virada = megasena.copy()
+
+        col = st.columns([2, 0.5, 0.5])
+
+        with col[0]:
+            mega_da_virada["ano"] = mega_da_virada["dt_sorteio"].dt.year
+            mega_da_virada = mega_da_virada[mega_da_virada["dt_sorteio"]. \
+                isin(mega_da_virada[mega_da_virada["ano"] != pd.Timestamp.now().year]. \
+                     groupby(["ano"])["dt_sorteio"].transform("max"))].reset_index(drop=True). \
+                drop(["ano"], axis=1)
+            mega_da_virada["dt_sorteio"] = mega_da_virada["dt_sorteio"].dt.strftime("%x (%a)")
 
             st.dataframe(
-                data=mega_copy,
+                data=mega_da_virada,
+                hide_index=True,
                 row_height=25,
+                height=387,
                 use_container_width=True,
                 column_config={
                     "id_sorteio": st.column_config.NumberColumn(label="Concurso", format="%04d"),
                     "dt_sorteio": st.column_config.TextColumn(label="Data do Sorteio"),
                     "bolas": st.column_config.ListColumn(label="Suas bolas acertadas"),
-                    "apostas": st.column_config.NumberColumn(label="Sua aposta n.°"),
+                    "acerto_6": st.column_config.NumberColumn(label="Acerto de 6"),
+                    "rateio_6": st.column_config.NumberColumn(label="Rateio de 6", format="dollar"),
+                    "acerto_5": st.column_config.NumberColumn(label="Acerto de 5"),
+                    "rateio_5": st.column_config.NumberColumn(label="Rateio de 5", format="dollar"),
+                    "acerto_4": st.column_config.NumberColumn(label="Acerto de 4"),
+                    "rateio_4": st.column_config.NumberColumn(label="Rateio de 4", format="dollar"),
                 }
             )
-
-with tab3:
-    sua_aposta = st.columns(5)[0].text_input("Sua aposta:")
-
-    col = st.columns(3)
-
-    with col[0]:
-        if st.button("**Acertei?**", type="primary"):
-            if sua_aposta:
-                mega_copy2 = {"id_sorteio": [], "dt_sorteio": [], "bolas": [], "acertos": []}
-
-                for row in megasena.copy().itertuples(index=False, name=None):
-                    match = [aposta for aposta in sua_aposta.split() if aposta in row[2]]
-
-                    if len(match) >= 4:
-                        mega_copy2["id_sorteio"].append(row[0])
-                        mega_copy2["dt_sorteio"].append(pd.to_datetime(row[1], format="%d/%m/%Y").strftime("%x (%a)"))
-                        mega_copy2["bolas"].append(row[2])
-                        mega_copy2["acertos"].append(len(match))
-
-                st.dataframe(
-                    data=mega_copy2,
-                    row_height=25,
-                    use_container_width=True,
-                    column_config={
-                        "id_sorteio": st.column_config.NumberColumn(label="Concurso", format="%04d"),
-                        "dt_sorteio": st.column_config.TextColumn(label="Data de Sorteio"),
-                        "bolas": st.column_config.ListColumn(label="Bolas Sorteadas"),
-                        "acertos": st.column_config.NumberColumn(label="Seus acertos"),
-                    }
-                )
-
-                st.button("**Recomeçar**", type="primary")
-            else:
-                st.toast("**Preencha suas bolas!**")
-
-with tab4:
-    # SELECT * FROM megasena WHERE dt_sorteio IN (
-    #     SELECT MAX(dt_sorteio) FROM megasena GROUP BY YEAR(dt_sorteio)
-    #         HAVING YEAR(dt_sorteio) <> YEAR(CURRENT_DATE)
-    # )
-    mega_da_virada = megasena.copy()
-
-    col = st.columns([2, 0.5, 0.5])
-
-    with col[0]:
-        mega_da_virada["dt_sorteio"] = pd.to_datetime(mega_da_virada["dt_sorteio"], format="%d/%m/%Y")
-        mega_da_virada["ano"] = mega_da_virada["dt_sorteio"].dt.year
-        mega_da_virada = mega_da_virada[mega_da_virada["dt_sorteio"]. \
-            isin(mega_da_virada[mega_da_virada["ano"] != pd.Timestamp.now().year]. \
-                 groupby(["ano"])["dt_sorteio"].transform("max"))].reset_index(drop=True). \
-            drop(["ano"], axis=1)
-        mega_da_virada["dt_sorteio"] = mega_da_virada["dt_sorteio"].dt.strftime("%d/%m/%Y (%a)")
-
-        st.dataframe(
-            data=mega_da_virada,
-            hide_index=True,
-            row_height=25,
-            use_container_width=True,
-            column_config={
-                "id_sorteio": st.column_config.NumberColumn(label="Concurso", format="%04d"),
-                "dt_sorteio": st.column_config.TextColumn(label="Data do Sorteio"),
-                "bolas": st.column_config.ListColumn(label="Suas bolas acertadas"),
-                "acerto_6": st.column_config.NumberColumn(label="Acerto de 6"),
-                "rateio_6": st.column_config.NumberColumn(label="Rateio de 6", format="dollar"),
-                "acerto_5": st.column_config.NumberColumn(label="Acerto de 5"),
-                "rateio_5": st.column_config.NumberColumn(label="Rateio de 5", format="dollar"),
-                "acerto_4": st.column_config.NumberColumn(label="Acerto de 4"),
-                "rateio_4": st.column_config.NumberColumn(label="Rateio de 4", format="dollar"),
-            }
-        )
 
 # def verificar_acertos(escolhidas, sorteadas):
 #     acertos = set(sorteadas).intersection(escolhidas)
