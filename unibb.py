@@ -44,25 +44,25 @@ with col[2]:
     side = st.columns(4)
 
     with side[0]:
-        if st.button("⏮"):
+        if st.button(":material/skip_previous:"):
             st.session_state["offset"] = 0
             rows_page(unibb, st.session_state["offset"])
             st.rerun()
 
     with side[1]:
-        if st.button("️◀"):
+        if st.button(":material/arrow_back_2:"):
             st.session_state["offset"] = max(0, st.session_state["offset"] - 10)
             rows_page(unibb, st.session_state["offset"])
             st.rerun()
 
     with side[2]:
-        if st.button("▶"):
+        if st.button(":material/play_arrow:"):
             st.session_state["offset"] = min(len(unibb) - 10, st.session_state["offset"] + 10)
             rows_page(unibb, st.session_state["offset"])
             st.rerun()
 
     with side[3]:
-        if st.button("⏭"):
+        if st.button(":material/skip_next:"):
             st.session_state["offset"] = len(unibb) - 10
             rows_page(unibb, st.session_state["offset"])
             st.rerun()
