@@ -18,7 +18,7 @@ pd.set_option("display.expand_frame_repr", False)
 pd.set_option("display.float_format", lambda val: f"R$ {locale.currency(val=val, symbol=False, grouping=True)}")
 pd.set_option("display.max_columns", None)
 
-engine: sa.Engine = sa.engine.create_engine(url=os.getenv("URL_AIVEN_PG"))
+engine: sa.Engine = sa.engine.create_engine(url=os.getenv("AIVEN_PG"))
 
 year: int = date.today().year
 year_month: int = year*100 + date.today().month
