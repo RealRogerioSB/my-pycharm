@@ -68,8 +68,32 @@ st.session_state["xlsx_file"] = st.columns(3)[0].file_uploader("Importar", type=
 if st.session_state["xlsx_file"] and st.session_state["xlsx_file"].name == "Mega-Sena.xlsx":
     megasena: pd.DataFrame = load_megasena(st.session_state["xlsx_file"])
 
-    tab1, tab2, tab3, tab4 = st.tabs(["**Minhas apostas**", "**Sorteios da Mega-Sena**",
-                                      "**Sua aposta da Mega-Sena**", "**Mega-Sena da Virada**"])
+    tab0, tab1, tab2, tab3, tab4 = st.tabs(["**Apostas Sorteadas**", "**Minhas apostas**", "**Sorteios da Mega-Sena**",
+                                            "**Sua aposta da Mega-Sena**", "**Mega-Sena da Virada**"])
+
+    with tab0:
+        with st.columns([2.8, 0.5, 0.5])[0]:
+            all_megasena = megasena.copy()
+            all_megasena["dt_sorteio"] = all_megasena["dt_sorteio"].dt.strftime("%x (%a)")
+
+            st.dataframe(
+                data=all_megasena,
+                hide_index = True,
+                row_height = 25,
+                height = 387,
+                use_container_width = True,
+                column_config = {
+                    "id_sorteio": st.column_config.NumberColumn(label="Concurso", format="%04d"),
+                    "dt_sorteio": st.column_config.TextColumn(label="Data do Sorteio"),
+                    "bolas": st.column_config.ListColumn(label="Bolas Sorteadas"),
+                    "acerto_6": st.column_config.NumberColumn(label="Acerto de 6"),
+                    "rateio_6": st.column_config.NumberColumn(label="Rateio de 6", format="dollar"),
+                    "acerto_5": st.column_config.NumberColumn(label="Acerto de 5"),
+                    "rateio_5": st.column_config.NumberColumn(label="Rateio de 5", format="dollar"),
+                    "acerto_4": st.column_config.NumberColumn(label="Acerto de 4"),
+                    "rateio_4": st.column_config.NumberColumn(label="Rateio de 4", format="dollar"),
+                }
+            )
 
     with tab1:
         minhas = [f"Aposta n.° {x + 1:02d} ➟ {" - ".join(aposta.split())}" for x, aposta in enumerate(minhas_apostas)]
@@ -83,9 +107,7 @@ if st.session_state["xlsx_file"] and st.session_state["xlsx_file"].name == "Mega
         )
 
     with tab2:
-        col = st.columns([2, 1, 1])
-
-        with col[0]:
+        with st.columns([2, 1, 1])[0]:
             for r in range(6, 3, -1):
                 st.write(f"**Acerto de {r} bolas**")
 
@@ -119,9 +141,7 @@ if st.session_state["xlsx_file"] and st.session_state["xlsx_file"].name == "Mega
     with tab3:
         sua_aposta = st.columns(5)[0].text_input("Sua aposta:")
 
-        col = st.columns(3)
-
-        with col[0]:
+        with st.columns(3)[0]:
             if st.button("**Acertei?**", type="primary"):
                 if sua_aposta:
                     with st.spinner("Obtendo as apostas, aguarde...", show_time=True):
@@ -157,11 +177,9 @@ if st.session_state["xlsx_file"] and st.session_state["xlsx_file"].name == "Mega
         #     SELECT MAX(dt_sorteio) FROM megasena GROUP BY YEAR(dt_sorteio)
         #         HAVING YEAR(dt_sorteio) <> YEAR(CURRENT_DATE)
         # )
-        mega_da_virada = megasena.copy()
 
-        col = st.columns([2, 0.5, 0.5])
-
-        with col[0]:
+        with st.columns([3, 0.5, 0.5])[0]:
+            mega_da_virada = megasena.copy()
             mega_da_virada["ano"] = mega_da_virada["dt_sorteio"].dt.year
             mega_da_virada = mega_da_virada[mega_da_virada["dt_sorteio"]. \
                 isin(mega_da_virada[mega_da_virada["ano"] != pd.Timestamp.now().year]. \
@@ -178,7 +196,7 @@ if st.session_state["xlsx_file"] and st.session_state["xlsx_file"].name == "Mega
                 column_config={
                     "id_sorteio": st.column_config.NumberColumn(label="Concurso", format="%04d"),
                     "dt_sorteio": st.column_config.TextColumn(label="Data do Sorteio"),
-                    "bolas": st.column_config.ListColumn(label="Suas bolas acertadas"),
+                    "bolas": st.column_config.ListColumn(label="Bolas Sorteadas"),
                     "acerto_6": st.column_config.NumberColumn(label="Acerto de 6"),
                     "rateio_6": st.column_config.NumberColumn(label="Rateio de 6", format="dollar"),
                     "acerto_5": st.column_config.NumberColumn(label="Acerto de 5"),
