@@ -1,4 +1,5 @@
 import locale
+from datetime import date
 
 import pandas as pd
 import streamlit as st
@@ -32,7 +33,7 @@ minhas_apostas: list[str] = [
 ]
 
 
-@st.cache_data(show_spinner="Obtendo os dados, aguarde...")
+@st.cache_data(show_spinner="⏳Obtendo os dados, aguarde...")
 def load_megasena(xlsx_file: str) -> pd.DataFrame:
     df: pd.DataFrame = pd.read_excel(io=xlsx_file, engine="openpyxl")
 
@@ -46,17 +47,12 @@ def load_megasena(xlsx_file: str) -> pd.DataFrame:
 
     df = df[["Concurso", "Data do Sorteio", "bolas", "Ganhadores 6 acertos", "Rateio 6 acertos",
              "Ganhadores 5 acertos", "Rateio 5 acertos", "Ganhadores 4 acertos", "Rateio 4 acertos"]]
-
     df.columns = ["id_sorteio", "dt_sorteio", "bolas", "acerto_6", "rateio_6",
                   "acerto_5", "rateio_5", "acerto_4", "rateio_4"]
-
     df.set_index(["id_sorteio"], inplace=True)
-
     df.loc[2701] = ["16/03/2024", "06 15 18 31 32 47", 0, 0.0, 72, 59349.01, 5712, 1068.7]
-
-    df = df.reset_index().sort_values(by=["id_sorteio", "dt_sorteio"], ignore_index=True)
-
     df["dt_sorteio"] = pd.to_datetime(df["dt_sorteio"], format="%d/%m/%Y")
+    df = df.reset_index().sort_values(by=["id_sorteio", "dt_sorteio"], ignore_index=True)
 
     return df
 
@@ -68,21 +64,30 @@ st.session_state["xlsx_file"] = st.columns(3)[0].file_uploader("Importar", type=
 if st.session_state["xlsx_file"] and st.session_state["xlsx_file"].name == "Mega-Sena.xlsx":
     megasena: pd.DataFrame = load_megasena(st.session_state["xlsx_file"])
 
-    tab0, tab1, tab2, tab3, tab4 = st.tabs(["**Apostas Sorteadas**", "**Minhas apostas**", "**Sorteios da Mega-Sena**",
-                                            "**Sua aposta da Mega-Sena**", "**Mega-Sena da Virada**"])
+    tab0, tab1, tab2, tab3, tab4 = st.tabs([
+        "**Apostas Sorteadas**", "**Minhas apostas**", "**Sorteios da Mega-Sena**",
+        "**Sua aposta da Mega-Sena**", "**Mega-Sena da Virada**"
+    ])
 
     with tab0:
-        with st.columns([2.8, 0.5, 0.5])[0]:
-            all_megasena = megasena.copy()
+        col = st.columns([0.4, 2.8, 0.5, 0.5])
+
+        with col[0]:
+            mes = st.slider("**Mês:**", min_value=1, max_value=12, value=date.today().month)
+            ano = st.selectbox("**Ano:**", options=range(date.today().year, 1995, -1))
+
+        with col[1]:
+            all_megasena = megasena[megasena["dt_sorteio"].dt.year.eq(ano) &
+                                    megasena["dt_sorteio"].dt.month.eq(mes)].copy()
             all_megasena["dt_sorteio"] = all_megasena["dt_sorteio"].dt.strftime("%x (%a)")
 
             st.dataframe(
                 data=all_megasena,
-                hide_index = True,
-                row_height = 25,
-                height = 387,
-                use_container_width = True,
-                column_config = {
+                hide_index=True,
+                row_height=25,
+                height=187,
+                use_container_width=True,
+                column_config={
                     "id_sorteio": st.column_config.NumberColumn(label="Concurso", format="%04d"),
                     "dt_sorteio": st.column_config.TextColumn(label="Data do Sorteio"),
                     "bolas": st.column_config.ListColumn(label="Bolas Sorteadas"),
@@ -102,7 +107,7 @@ if st.session_state["xlsx_file"] and st.session_state["xlsx_file"].name == "Mega
             data=minhas,
             use_container_width=True,
             row_height=25,
-            height=387,
+            height=187,
             column_config={"value": st.column_config.TextColumn(label="Minhas Apostas")}
         )
 
@@ -191,7 +196,7 @@ if st.session_state["xlsx_file"] and st.session_state["xlsx_file"].name == "Mega
                 data=mega_da_virada,
                 hide_index=True,
                 row_height=25,
-                height=387,
+                height=187,
                 use_container_width=True,
                 column_config={
                     "id_sorteio": st.column_config.NumberColumn(label="Concurso", format="%04d"),
