@@ -73,12 +73,12 @@ if st.session_state["xlsx_file"] and st.session_state["xlsx_file"].name == "Mega
         col = st.columns([0.4, 2.8, 0.5, 0.5])
 
         with col[0]:
-            mes = st.slider("**Mês:**", min_value=1, max_value=12, value=date.today().month)
-            ano = st.selectbox("**Ano:**", options=range(date.today().year, 1995, -1))
+            mes: int = st.slider("**Mês:**", min_value=1, max_value=12, value=date.today().month)
+            ano: int = st.selectbox("**Ano:**", options=range(date.today().year, 1995, -1))
 
         with col[1]:
-            all_megasena = megasena[megasena["dt_sorteio"].dt.year.eq(ano) &
-                                    megasena["dt_sorteio"].dt.month.eq(mes)].copy()
+            all_megasena: pd.DataFrame = megasena[megasena["dt_sorteio"].dt.year.eq(ano) &
+                                                  megasena["dt_sorteio"].dt.month.eq(mes)].copy()
             all_megasena["dt_sorteio"] = all_megasena["dt_sorteio"].dt.strftime("%x (%a)")
 
             st.dataframe(
@@ -101,7 +101,8 @@ if st.session_state["xlsx_file"] and st.session_state["xlsx_file"].name == "Mega
             )
 
     with tab1:
-        minhas = [f"Aposta n.° {x + 1:02d} ➟ {" - ".join(aposta.split())}" for x, aposta in enumerate(minhas_apostas)]
+        minhas: list[str] = [f"Aposta n.° {x + 1:02d} ➟ {" - ".join(aposta.split())}"
+                             for x, aposta in enumerate(minhas_apostas)]
 
         st.columns(3)[0].dataframe(
             data=minhas,
@@ -144,7 +145,7 @@ if st.session_state["xlsx_file"] and st.session_state["xlsx_file"].name == "Mega
                 )
 
     with tab3:
-        sua_aposta = st.columns(5)[0].text_input("Sua aposta:")
+        sua_aposta: str = st.columns(5)[0].text_input("Sua aposta:")
 
         with st.columns(3)[0]:
             if st.button("**Acertei?**", type="primary"):
@@ -153,7 +154,7 @@ if st.session_state["xlsx_file"] and st.session_state["xlsx_file"].name == "Mega
                         mega_copy2 = {"id_sorteio": [], "dt_sorteio": [], "bolas": [], "acertos": []}
 
                         for row in megasena.copy().itertuples(index=False, name=None):
-                            match = [aposta for aposta in sua_aposta.split() if aposta in row[2]]
+                            match: list[str] = [aposta for aposta in sua_aposta.split() if aposta in row[2]]
 
                             if len(match) >= 4:
                                 mega_copy2["id_sorteio"].append(row[0])
@@ -184,7 +185,7 @@ if st.session_state["xlsx_file"] and st.session_state["xlsx_file"].name == "Mega
         # )
 
         with st.columns([3, 0.5, 0.5])[0]:
-            mega_da_virada = megasena.copy()
+            mega_da_virada: pd.DataFrame = megasena.copy()
             mega_da_virada["ano"] = mega_da_virada["dt_sorteio"].dt.year
             mega_da_virada = mega_da_virada[mega_da_virada["dt_sorteio"]. \
                 isin(mega_da_virada[mega_da_virada["ano"] != pd.Timestamp.now().year]. \

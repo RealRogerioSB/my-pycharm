@@ -6,7 +6,7 @@ st.set_page_config(page_title="Cursos da UniBB")
 
 st.header("Cursos da UniBB")
 
-engine = st.connection(name="AIVEN-PG", type=SQLConnection)
+engine: SQLConnection = st.connection(name="AIVEN-PG", type=SQLConnection)
 
 
 @st.cache_data(show_spinner="⏳Obtendo os dados, aguarde...")
@@ -28,7 +28,7 @@ def load_duplicity() -> pd.DataFrame:
     )
 
 
-unibb = load_unibb()
+unibb: pd.DataFrame = load_unibb()
 
 tab1, tab2 = st.tabs(["**Cursos da UniBB**", "**Cursos Duplicados**"])
 
