@@ -1,5 +1,8 @@
 import os
 import streamlit as st
 
-st.subheader("❓ Ajuda")
-st.page_link(os.path.join(os.getcwd(), "app.py"), label="Voltar", icon=":material/home:")
+st.header(":material/help: Ajuda")
+
+if st.button("**Voltar**", icon=":material/house:"):
+    st.session_state["sidebar_state"] = "expanded"
+    st.switch_page(os.path.join(os.getcwd(), "app.py"))
