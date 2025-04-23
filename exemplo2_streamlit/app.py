@@ -29,13 +29,16 @@ with st.sidebar:
     st.header(":material/house: Menu")
 
     with st.expander("**1. Página**"):
-        if st.button("**Configuração**", icon=":material/settings:", on_click=tooggle_sidebar, use_container_width=True):
+        if st.button("**Configuração**", icon=":material/settings:",
+                     on_click=tooggle_sidebar, use_container_width=True):
             st.switch_page(os.path.join(os.getcwd(), "pages", "1_config.py"))
 
     with st.expander("**2. Página**"):
-        if st.button("**Ferramenta**", icon=":material/construction:", on_click=tooggle_sidebar, use_container_width=True):
+        if st.button("**Ferramenta**", icon=":material/construction:",
+                     on_click=tooggle_sidebar, use_container_width=True):
             st.switch_page(os.path.join(os.getcwd(), "pages", "2_tool.py"))
 
     with st.expander("**3. Página**"):
-        if st.button("**Ajuda**", icon=":material/help:", on_click=tooggle_sidebar, use_container_width=True):
+        if st.button("**Ajuda**", icon=":material/help:",
+                     on_click=tooggle_sidebar, use_container_width=True):
             st.switch_page(os.path.join(os.getcwd(), "pages", "3_help.py"))
