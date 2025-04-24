@@ -11,10 +11,7 @@ engine: SQLConnection = st.connection(name="AIVEN-PG", type=SQLConnection)
 
 @st.cache_data(show_spinner="⏳Obtendo os dados, aguarde...")
 def load_unibb() -> pd.DataFrame:
-    return engine.query(
-        sql="SELECT id_curso, nm_curso, hr_curso FROM unibb ORDER BY id_curso",
-        show_spinner=False
-    )
+    return engine.query(sql="SELECT * FROM unibb", show_spinner=False)
 
 
 @st.cache_data(show_spinner="⏳Obtendo os dados, aguarde...")
@@ -37,6 +34,7 @@ with tab1:
         data=unibb,
         hide_index=True,
         column_config={
+            "id": st.column_config.NumberColumn(label="Index", required=True, width="small"),
             "id_curso": st.column_config.NumberColumn(label="Código", required=True, width="small"),
             "nm_curso": st.column_config.TextColumn(label="Curso", required=True, width="large"),
             "hr_curso": st.column_config.NumberColumn(label="Horas", required=True, width="small"),
