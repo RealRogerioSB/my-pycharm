@@ -18,12 +18,11 @@ st.header("💰Contracheque BB")
 
 @st.cache_data(show_spinner="⏳Obtendo os dados, aguarde...")
 def last_period() -> int:
-    df = engine.query(
-        sql="SELECT MAX(período) FROM espelho",
+    return engine.query(
+        sql="SELECT MAX(período) AS MAX_PERIOD FROM espelho",
         show_spinner=False,
         ttl=60
-    )
-    return df.iloc[0, 0]
+    )["max_period"].iloc[0]
 
 
 take_year: int = int(last_period() / 100)
@@ -77,12 +76,13 @@ with tab1:
     col1, col2 = st.columns([1, 2], border=True)
 
     with col1:
-        mes: int = st.slider(label="**Mês:**", min_value=1, max_value=12, value=take_month)
+        mes: int = st.slider(label="**Mês:**", min_value=1, max_value=12, value=take_month, key="slider_months")
 
         ano: int = st.columns(3)[0].selectbox(
             label="**Ano:**",
             options=range(date.today().year, 2004, -1),
-            index=0 if take_year == date.today().year else 1
+            index=0 if take_year == date.today().year else 1,
+            key="select_years"
         )
 
     with col2:
@@ -96,7 +96,8 @@ with tab1:
             use_container_width=True,
             hide_index=True,
             column_config={"Valor": st.column_config.NumberColumn(format="dollar")},
-            row_height=28
+            row_height=28,
+            key="editor_months"
         )
 
 with tab2:
@@ -107,7 +108,8 @@ with tab2:
             label="**Ano:**",
             min_value=2005,
             max_value=date.today().year,
-            value=take_year
+            value=take_year,
+            key="slider_years"
         )
 
     with col2:
@@ -121,5 +123,8 @@ with tab2:
             use_container_width=True,
             hide_index=True,
             column_config={"Valor": st.column_config.NumberColumn(format="dollar")},
-            row_height=28
+            row_height=28,
+            key="editor_years"
         )
+
+st.write(st.session_state)
