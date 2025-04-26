@@ -1,9 +1,7 @@
 import locale
 from datetime import date
 
-import matplotlib.pyplot as plt
 import pandas as pd
-import seaborn as sns
 import streamlit as st
 from streamlit.connections import SQLConnection
 
@@ -32,18 +30,10 @@ take_month: int = last_period() % 100
 @st.cache_data(show_spinner="**⏳Obtendo os dados, aguarde...**")
 def load_months(receive_year: int, receive_month: int) -> pd.DataFrame:
     return engine.query(
-        sql="""SELECT t2.lançamento,
-                      t1.período,
-                      t1.acerto,
-                      t1.valor
-               FROM espelho t1
-                    INNER JOIN lançamento t2
-                               ON t2.id_lançamento = t1.id_lançamento
-               WHERE t1.período / 100 = :get_year
-                 AND t1.período % 100 = :get_month
-               ORDER BY t1.período,
-                        t1.acerto DESC,
-                        t1.valor DESC""",
+        sql="""SELECT t2.lançamento, t1.período, t1.acerto, t1.valor
+               FROM espelho t1 INNER JOIN lançamento t2 ON t2.id_lançamento = t1.id_lançamento
+               WHERE t1.período / 100 = :get_year AND t1.período % 100 = :get_month
+               ORDER BY t1.período, t1.acerto DESC, t1.valor DESC""",
         show_spinner=False,
         ttl=60,
         params=dict(get_year=receive_year, get_month=receive_month),
@@ -53,24 +43,17 @@ def load_months(receive_year: int, receive_month: int) -> pd.DataFrame:
 @st.cache_data(show_spinner="**⏳Obtendo os dados, aguarde...**")
 def load_annual(receive_year: int) -> pd.DataFrame:
     return engine.query(
-        sql="""SELECT t2.lançamento,
-                      t1.período,
-                      t1.acerto,
-                      t1.valor
-               FROM espelho t1
-                    INNER JOIN lançamento t2
-                               ON t2.id_lançamento = t1.id_lançamento
+        sql="""SELECT t2.lançamento, t1.período, t1.acerto, t1.valor
+               FROM espelho t1 INNER JOIN lançamento t2 ON t2.id_lançamento = t1.id_lançamento
                WHERE t1.período / 100 = :get_year
-               ORDER BY t1.período,
-                        t1.acerto DESC,
-                        t1.valor DESC""",
+               ORDER BY t1.período, t1.acerto DESC, t1.valor DESC""",
         show_spinner=False,
         ttl=60,
         params=dict(get_year=receive_year),
     )
 
 
-tab1, tab2 = st.tabs(["**Mensal**", "**Anual**"])
+tab1, tab2, tab3, tab4 = st.tabs(["**Mensal**", "**Anual**", "**Extrato**", "**Gráficos**"])
 
 with tab1:
     col1, col2 = st.columns([1, 2], border=True)
@@ -127,4 +110,20 @@ with tab2:
             key="editor_years"
         )
 
-st.write(st.session_state)
+with tab3:
+    pass
+
+with tab4:
+    col1, col2 = st.columns([1, 2], border=True)
+
+    with col1:
+        anual: int = st.slider(
+            label="**Ano:**",
+            min_value=2005,
+            max_value=date.today().year,
+            value=take_year,
+            key="slider_graphic"
+        )
+
+    with col2:
+        st.bar_chart()
