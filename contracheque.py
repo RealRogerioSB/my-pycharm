@@ -2,6 +2,7 @@ import locale
 from datetime import date
 
 import pandas as pd
+import plotly.graph_objects as go
 import streamlit as st
 from streamlit.connections import SQLConnection
 
@@ -31,7 +32,7 @@ take_month: int = last_period() % 100
 # extrato mensal
 @st.cache_data(show_spinner="**⏳Obtendo os dados, aguarde...**")
 def load_extract_monthly(receive_year: int, receive_month: int) -> pd.DataFrame:
-    return engine.query(
+    load: pd.DataFrame = engine.query(
         sql="""SELECT l.lançamento, e.período, e.acerto, e.valor
                FROM espelho e INNER JOIN lançamento l ON l.id_lançamento = e.id_lançamento
                WHERE e.período / 100 = :get_year
@@ -41,6 +42,10 @@ def load_extract_monthly(receive_year: int, receive_month: int) -> pd.DataFrame:
         ttl=60,
         params=dict(get_year=receive_year, get_month=receive_month),
     )
+    load.columns = [str(coluna).capitalize() for coluna in load.columns]
+    load["Período"] = pd.to_datetime(load["Período"], format="%Y%m").dt.strftime("%B de %Y")
+
+    return load
 
 
 # extrato anual
@@ -54,16 +59,15 @@ def load_extract_annual(receive_year: int) -> pd.DataFrame:
         ttl=60,
         params=dict(get_year=receive_year),
     )
-    load["período"] = pd.to_datetime(load["período"], format="%Y%m").dt.strftime("%m").astype(int)
-    load = load.pivot(index=["lançamento", "acerto"], columns="período", values="valor") \
+    load.columns = [str(coluna).capitalize() for coluna in load.columns]
+    load["Mês"] = pd.to_datetime(load["Período"], format="%Y%m").dt.strftime("%b")
+    load = load.pivot(columns="Mês", index=["Lançamento", "Acerto"], values="Valor") \
         .reset_index() \
-        .set_index(["lançamento"]) \
-        .fillna(value=0) \
-        .rename(columns={1: "Jan", 2: "Fev", 3: "Mar", 4: "Abr", 5: "Mai", 6: "Jun",
-                         7: "Jul", 8: "Ago", 9: "Set", 10: "Out", 11: "Nov", 12: "Dez"})
-    load["Média"] = load[load.columns[1:]].mean(axis=1)
+        .fillna(value=0)[["Lançamento", "Acerto", "Jan", "Fev", "Mar", "Abr",
+                          "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]]
+    load["Média"] = load.mean(axis=1, numeric_only=True)
     load["Total"] = load[load.columns[1:-1]].sum(axis=1)
-    load = load.sort_values(by=["acerto", "Total"], ascending=[False, False])
+    load = load.sort_values(by=["Acerto", "Total"], ascending=[False, False])
 
     return load
 
@@ -79,11 +83,9 @@ def load_total_annual() -> pd.DataFrame:
         show_spinner=False,
         ttl=60,
     )
-    load["ano"] = pd.to_datetime(load["período"], format="%Y%m").dt.strftime("%Y")
-    load["mês"] = pd.to_datetime(load["período"], format="%Y%m").dt.strftime("%b")
-    load = load.groupby(["ano", "mês"])["valor"].sum() \
-        .reset_index() \
-        .pivot(index="ano", columns="mês", values="valor") \
+    load["Ano"] = pd.to_datetime(load["período"], format="%Y%m").dt.strftime("%Y")
+    load["Mês"] = pd.to_datetime(load["período"], format="%Y%m").dt.strftime("%b")
+    load = load.pivot(columns="Mês", index="Ano", values="valor") \
         .fillna(0)[["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]]
     load["Média"] = load.mean(axis=1)
     load["Total"] = load[load.columns[:-1]].sum(axis=1)
@@ -122,13 +124,10 @@ with tab1:
             label="**Ano:**",
             options=range(date.today().year, 2004, -1),
             index=0 if take_year == date.today().year else 1,
-            key="select_years"
         )
 
     with col2:
         df1: pd.DataFrame = load_extract_monthly(ano, mes)
-        df1.columns = [str(column).capitalize() for column in df1.columns]
-        df1["Período"] = pd.to_datetime(df1["Período"], format="%Y%m").dt.strftime("%B de %Y")
 
         st.data_editor(
             data=df1,
@@ -137,7 +136,6 @@ with tab1:
             hide_index=True,
             column_config={"Valor": st.column_config.NumberColumn(format="dollar")},
             row_height=28,
-            key="editor_months"
         )
 
 with tab2:
@@ -146,21 +144,19 @@ with tab2:
         min_value=2005,
         max_value=date.today().year,
         value=take_year,
-        key="slider_years"
+        key="slider_years",
     )
 
     df2: pd.DataFrame = load_extract_annual(anual)
-    df2.columns = [str(column).capitalize() for column in df2.columns]
-    df2.index.rename("Lançamento", inplace=True)
 
     st.data_editor(
         data=df2,
         height=318,
         use_container_width=True,
+        hide_index=True,
         column_config={key: st.column_config.NumberColumn(format="dollar")
-                       for key in df2.columns if key not in ["Acerto"]},
+                       for key in df2.columns if key not in ["Lançamento", "Acerto"]},
         row_height=28,
-        key="editor_years"
     )
 
 with tab3:
@@ -180,9 +176,46 @@ with tab4:
         min_value=2005,
         max_value=date.today().year,
         value=take_year,
-        key="slider_graphic"
+        key="slider_graphic",
     )
 
     df4: pd.DataFrame = load_graphic_annual(slider_graphic)
 
-    st.bar_chart(data=df4)
+    # criar gráfico de barras com Plotly
+    fig = go.Figure()
+
+    # adicionar barras para cada mês
+    for mes in df4.columns[1:]:
+        fig.add_trace(
+            go.Bar(
+                x=[mes],
+                y=[df4[mes].sum()],
+                text=locale.currency(df4[mes].sum(), grouping=True),
+                textposition="outside",
+                marker=dict(color=f"rgba({hash(mes) % 255}, {hash(mes) % 200}, {hash(mes) % 150}, 0.8)"),
+            )
+        )
+
+    # configurações de layout detalhadas para o tema caprichado
+    fig.update_layout(
+        title=f"Espelho - {slider_graphic}",
+        xaxis=dict(
+            showticklabels=True,
+            title="",
+            tickfont=dict(size=14, color="black"),
+        ),
+        yaxis=dict(visible=False),
+        plot_bgcolor="white",
+        # paper_bgcolor="linear-gradient(to bottom, rgba(0, 128, 255, 0.2), rgba(255, 255, 0, 0.1))",
+        title_font=dict(size=24, color="black", family="Arial"),
+        margin=dict(t=50, b=30, l=30, r=30),
+        showlegend=False,
+    )
+
+    # mais refinamentos visuais
+    fig.update_traces(
+        marker_line_width=1.5,
+        marker_line_color="rgba(0,0,0,0.7)",  # Contorno preto suave nas barras
+    )
+
+    st.plotly_chart(fig, use_container_width=True)
