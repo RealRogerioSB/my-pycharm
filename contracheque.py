@@ -12,6 +12,8 @@ st.set_page_config(page_title="Contracheque BB", layout="wide")
 
 engine: SQLConnection = st.connection(name="AIVEN-PG", type=SQLConnection)
 
+sort_months: list[str] = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
+
 st.header("💰Contracheque BB")
 
 
@@ -63,8 +65,8 @@ def load_extract_annual(receive_year: int) -> pd.DataFrame:
     load["Mês"] = pd.to_datetime(load["Período"], format="%Y%m").dt.strftime("%b")
     load = load.pivot(columns="Mês", index=["Lançamento", "Acerto"], values="Valor") \
         .reset_index() \
-        .fillna(value=0)[["Lançamento", "Acerto", "Jan", "Fev", "Mar", "Abr",
-                          "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]]
+        .fillna(value=0)
+    load = load.reindex(columns=["Lançamento", "Acerto"] + [month for month in sort_months if month in load.columns])
     load["Média"] = load.mean(axis=1, numeric_only=True)
     load["Total"] = load[load.columns[1:-1]].sum(axis=1)
     load = load.sort_values(by=["Acerto", "Total"], ascending=[False, False])
@@ -83,10 +85,10 @@ def load_total_annual() -> pd.DataFrame:
         show_spinner=False,
         ttl=60,
     )
-    load["Ano"] = pd.to_datetime(load["período"], format="%Y%m").dt.strftime("%Y")
+    load["Ano"] = pd.to_datetime(load["período"], format="%Y%m").dt.year
     load["Mês"] = pd.to_datetime(load["período"], format="%Y%m").dt.strftime("%b")
-    load = load.pivot(columns="Mês", index="Ano", values="valor") \
-        .fillna(0)[["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]]
+    load = load.pivot(columns="Mês", index="Ano", values="valor").fillna(0)
+    load = load.reindex(columns=[month for month in sort_months if month in load.columns])
     load["Média"] = load.mean(axis=1)
     load["Total"] = load[load.columns[:-1]].sum(axis=1)
 
@@ -108,6 +110,7 @@ def load_graphic_annual(receive_year: int) -> pd.DataFrame:
     )
     load["mês"] = pd.to_datetime(load["período"], format="%Y%m").dt.strftime("%b")
     load = load.pivot(columns="mês", values="valor").reset_index()
+    load = load.reindex(columns=[month for month in sort_months if month in load.columns])
 
     return load
 
@@ -181,22 +184,19 @@ with tab4:
 
     df4: pd.DataFrame = load_graphic_annual(slider_graphic)
 
-    # criar gráfico de barras com Plotly
     fig = go.Figure()
 
-    # adicionar barras para cada mês
-    for mes in df4.columns[1:]:
+    for mes in df4.columns:
         fig.add_trace(
             go.Bar(
                 x=[mes],
                 y=[df4[mes].sum()],
                 text=locale.currency(df4[mes].sum(), grouping=True),
                 textposition="outside",
-                marker=dict(color=f"rgba({hash(mes) % 255}, {hash(mes) % 200}, {hash(mes) % 150}, 0.8)"),
+                marker=dict(color=f"rgba({hash(mes) % 255}, {hash(mes) % 200}, {hash(mes) % 150}, 2.0)"),
             )
         )
 
-    # configurações de layout detalhadas para o tema caprichado
     fig.update_layout(
         title=f"Espelho - {slider_graphic}",
         xaxis=dict(
@@ -206,8 +206,8 @@ with tab4:
         ),
         yaxis=dict(visible=False),
         plot_bgcolor="white",
-        # paper_bgcolor="linear-gradient(to bottom, rgba(0, 128, 255, 0.2), rgba(255, 255, 0, 0.1))",
-        title_font=dict(size=24, color="black", family="Arial"),
+        paper_bgcolor="white",
+        title_font=dict(size=24, color="black", family="Helvetica"),
         margin=dict(t=50, b=30, l=30, r=30),
         showlegend=False,
     )
@@ -215,7 +215,7 @@ with tab4:
     # mais refinamentos visuais
     fig.update_traces(
         marker_line_width=1.5,
-        marker_line_color="rgba(0,0,0,0.7)",  # Contorno preto suave nas barras
+        marker_line_color="rgba(0, 0, 0, 0.5)",
     )
 
     st.plotly_chart(fig, use_container_width=True)
