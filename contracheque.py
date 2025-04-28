@@ -8,13 +8,11 @@ from streamlit.connections import SQLConnection
 
 locale.setlocale(locale.LC_ALL, "pt_BR.UTF-8")
 
-st.set_page_config(page_title="Contracheque BB", layout="wide")
-
 engine: SQLConnection = st.connection(name="AIVEN-PG", type=SQLConnection)
 
 sort_months: list[str] = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
 
-st.header("💰Contracheque BB")
+st.header(":material/payments: Contracheque BB")
 
 
 # captura o último período
@@ -123,7 +121,7 @@ with tab1:
     with col1:
         mes: int = st.slider(label="**Mês:**", min_value=1, max_value=12, value=take_month, key="slider_months")
 
-        ano: int = st.columns(3)[0].selectbox(
+        ano: int = st.columns(2)[0].selectbox(
             label="**Ano:**",
             options=range(date.today().year, 2004, -1),
             index=0 if take_year == date.today().year else 1,

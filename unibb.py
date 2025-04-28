@@ -2,9 +2,7 @@ import pandas as pd
 import streamlit as st
 from streamlit.connections import SQLConnection
 
-st.set_page_config(page_title="Cursos da UniBB")
-
-st.header("Cursos da UniBB")
+st.header(":material/book_5: Cursos da UniBB")
 
 engine: SQLConnection = st.connection(name="AIVEN-PG", type=SQLConnection)
 
@@ -25,13 +23,12 @@ def load_duplicity() -> pd.DataFrame:
     )
 
 
-unibb: pd.DataFrame = load_unibb()
-
 tab1, tab2 = st.tabs(["**Cursos da UniBB**", "**Cursos Duplicados**"])
 
 with tab1:
     st.data_editor(
-        data=unibb,
+        data=load_unibb(),
+        use_container_width=True,
         hide_index=True,
         column_config={
             "id": st.column_config.NumberColumn(label="Index", required=True, width="small"),
@@ -48,6 +45,7 @@ with tab1:
 with tab2:
     st.data_editor(
         data=load_duplicity(),
+        use_container_width=True,
         hide_index=True,
         column_config={
             "id": st.column_config.NumberColumn(label="Index", width="small"),

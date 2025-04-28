@@ -9,8 +9,6 @@ locale.setlocale(locale.LC_ALL, "pt_BR.UTF-8")
 if "xlsx_file" not in st.session_state:
     st.session_state["xlsx_file"] = None
 
-st.set_page_config(layout="wide")
-
 minhas_apostas: list[str] = [
     "05 15 26 27 46 53",  # aposta n.° 1
     "03 12 19 20 45 47",  # aposta n.° 2
@@ -57,7 +55,7 @@ def load_megasena(xlsx_file: str) -> pd.DataFrame:
     return df
 
 
-st.title("Megasena")
+st.header(":material/price_check: Mega-Sena")
 
 st.session_state["xlsx_file"] = st.columns(3)[0].file_uploader("Importar", type="xlsx", label_visibility="hidden")
 
@@ -70,7 +68,7 @@ if st.session_state["xlsx_file"] and st.session_state["xlsx_file"].name == "Mega
     ])
 
     with tab0:
-        col = st.columns([0.4, 2.8, 0.5, 0.5])
+        col = st.columns([1, 4])
 
         with col[0]:
             mes: int = st.slider("**Mês:**", min_value=1, max_value=12, value=date.today().month)
@@ -179,54 +177,29 @@ if st.session_state["xlsx_file"] and st.session_state["xlsx_file"].name == "Mega
                     st.toast("**Preencha suas bolas!**")
 
     with tab4:
-        # SELECT * FROM megasena WHERE dt_sorteio IN (
-        #     SELECT MAX(dt_sorteio) FROM megasena GROUP BY YEAR(dt_sorteio)
-        #         HAVING YEAR(dt_sorteio) <> YEAR(CURRENT_DATE)
-        # )
+        mega_da_virada: pd.DataFrame = megasena.copy()
+        mega_da_virada["ano"] = mega_da_virada["dt_sorteio"].dt.year
+        mega_da_virada = mega_da_virada[mega_da_virada["dt_sorteio"]. \
+            isin(mega_da_virada[mega_da_virada["ano"] != pd.Timestamp.now().year]. \
+                 groupby(["ano"])["dt_sorteio"].transform("max"))].reset_index(drop=True). \
+            drop(["ano"], axis=1)
+        mega_da_virada["dt_sorteio"] = mega_da_virada["dt_sorteio"].dt.strftime("%x (%a)")
 
-        with st.columns([3, 0.5, 0.5])[0]:
-            mega_da_virada: pd.DataFrame = megasena.copy()
-            mega_da_virada["ano"] = mega_da_virada["dt_sorteio"].dt.year
-            mega_da_virada = mega_da_virada[mega_da_virada["dt_sorteio"]. \
-                isin(mega_da_virada[mega_da_virada["ano"] != pd.Timestamp.now().year]. \
-                     groupby(["ano"])["dt_sorteio"].transform("max"))].reset_index(drop=True). \
-                drop(["ano"], axis=1)
-            mega_da_virada["dt_sorteio"] = mega_da_virada["dt_sorteio"].dt.strftime("%x (%a)")
-
-            st.dataframe(
-                data=mega_da_virada,
-                hide_index=True,
-                row_height=25,
-                height=187,
-                use_container_width=True,
-                column_config={
-                    "id_sorteio": st.column_config.NumberColumn(label="Concurso", format="%04d"),
-                    "dt_sorteio": st.column_config.TextColumn(label="Data do Sorteio"),
-                    "bolas": st.column_config.ListColumn(label="Bolas Sorteadas"),
-                    "acerto_6": st.column_config.NumberColumn(label="Acerto de 6"),
-                    "rateio_6": st.column_config.NumberColumn(label="Rateio de 6", format="dollar"),
-                    "acerto_5": st.column_config.NumberColumn(label="Acerto de 5"),
-                    "rateio_5": st.column_config.NumberColumn(label="Rateio de 5", format="dollar"),
-                    "acerto_4": st.column_config.NumberColumn(label="Acerto de 4"),
-                    "rateio_4": st.column_config.NumberColumn(label="Rateio de 4", format="dollar"),
-                }
-            )
-
-# def verificar_acertos(escolhidas, sorteadas):
-#     acertos = set(sorteadas).intersection(escolhidas)
-#
-#     if len(acertos) == 4:
-#         return f"Você acertou 4 números -> {sorted(acertos)}"
-#     elif len(acertos) == 5:
-#         return f"Você acertou 5 números -> {sorted(acertos)}"
-#     elif len(acertos) == 6:
-#         return f"Você acertou 6 números -> {sorted(acertos)}"
-#     else:
-#         return f"Você não acertou nem 4, 5 e 6 números..."
-
-
-# bolas_escolhidas = [6, 13, 25, 33, 42, 50]
-# bolas_sorteadas = [6, 13, 25, 33, 42, 50]
-
-# resultado = verificar_acertos(bolas_escolhidas, bolas_sorteadas)
-# print(resultado)
+        st.dataframe(
+            data=mega_da_virada,
+            hide_index=True,
+            row_height=25,
+            height=187,
+            use_container_width=True,
+            column_config={
+                "id_sorteio": st.column_config.NumberColumn(label="Concurso", format="%04d"),
+                "dt_sorteio": st.column_config.TextColumn(label="Data do Sorteio"),
+                "bolas": st.column_config.ListColumn(label="Bolas Sorteadas"),
+                "acerto_6": st.column_config.NumberColumn(label="Acerto de 6"),
+                "rateio_6": st.column_config.NumberColumn(label="Rateio de 6", format="dollar"),
+                "acerto_5": st.column_config.NumberColumn(label="Acerto de 5"),
+                "rateio_5": st.column_config.NumberColumn(label="Rateio de 5", format="dollar"),
+                "acerto_4": st.column_config.NumberColumn(label="Acerto de 4"),
+                "rateio_4": st.column_config.NumberColumn(label="Rateio de 4", format="dollar"),
+            }
+        )
