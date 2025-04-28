@@ -82,8 +82,6 @@ if st.session_state["xlsx_file"] and st.session_state["xlsx_file"].name == "Mega
             st.dataframe(
                 data=all_megasena,
                 hide_index=True,
-                row_height=25,
-                height=187,
                 use_container_width=True,
                 column_config={
                     "id_sorteio": st.column_config.NumberColumn(label="Concurso", format="%04d"),
@@ -95,7 +93,8 @@ if st.session_state["xlsx_file"] and st.session_state["xlsx_file"].name == "Mega
                     "rateio_5": st.column_config.NumberColumn(label="Rateio de 5", format="dollar"),
                     "acerto_4": st.column_config.NumberColumn(label="Acerto de 4"),
                     "rateio_4": st.column_config.NumberColumn(label="Rateio de 4", format="dollar"),
-                }
+                },
+                row_height=25,
             )
 
     with tab1:
@@ -105,9 +104,8 @@ if st.session_state["xlsx_file"] and st.session_state["xlsx_file"].name == "Mega
         st.columns(3)[0].dataframe(
             data=minhas,
             use_container_width=True,
+            column_config={"value": st.column_config.TextColumn(label="Minhas Apostas")},
             row_height=25,
-            height=187,
-            column_config={"value": st.column_config.TextColumn(label="Minhas Apostas")}
         )
 
     with tab2:
@@ -132,14 +130,14 @@ if st.session_state["xlsx_file"] and st.session_state["xlsx_file"].name == "Mega
 
                 st.dataframe(
                     data=mega_copy,
-                    row_height=25,
                     use_container_width=True,
                     column_config={
                         "id_sorteio": st.column_config.NumberColumn(label="Concurso", format="%04d"),
                         "dt_sorteio": st.column_config.TextColumn(label="Data do Sorteio"),
                         "bolas": st.column_config.ListColumn(label="Suas bolas acertadas"),
                         "apostas": st.column_config.NumberColumn(label="Sua aposta n.°"),
-                    }
+                    },
+                    row_height=25,
                 )
 
     with tab3:
@@ -162,14 +160,14 @@ if st.session_state["xlsx_file"] and st.session_state["xlsx_file"].name == "Mega
 
                         st.dataframe(
                             data=mega_copy2,
-                            row_height=25,
                             use_container_width=True,
                             column_config={
                                 "id_sorteio": st.column_config.NumberColumn(label="Concurso", format="%04d"),
                                 "dt_sorteio": st.column_config.TextColumn(label="Data de Sorteio"),
                                 "bolas": st.column_config.ListColumn(label="Bolas Sorteadas"),
                                 "acertos": st.column_config.NumberColumn(label="Seus acertos"),
-                            }
+                            },
+                            row_height=25,
                         )
 
                     st.button("**Recomeçar**", type="primary")
@@ -187,10 +185,8 @@ if st.session_state["xlsx_file"] and st.session_state["xlsx_file"].name == "Mega
 
         st.dataframe(
             data=mega_da_virada,
-            hide_index=True,
-            row_height=25,
-            height=187,
             use_container_width=True,
+            hide_index=True,
             column_config={
                 "id_sorteio": st.column_config.NumberColumn(label="Concurso", format="%04d"),
                 "dt_sorteio": st.column_config.TextColumn(label="Data do Sorteio"),
@@ -201,5 +197,6 @@ if st.session_state["xlsx_file"] and st.session_state["xlsx_file"].name == "Mega
                 "rateio_5": st.column_config.NumberColumn(label="Rateio de 5", format="dollar"),
                 "acerto_4": st.column_config.NumberColumn(label="Acerto de 4"),
                 "rateio_4": st.column_config.NumberColumn(label="Rateio de 4", format="dollar"),
-            }
+            },
+            row_height=25,
         )

@@ -136,7 +136,7 @@ with tab1:
             use_container_width=True,
             hide_index=True,
             column_config={"Valor": st.column_config.NumberColumn(format="dollar")},
-            row_height=28,
+            row_height=25,
         )
 
 with tab2:
@@ -157,7 +157,7 @@ with tab2:
         hide_index=True,
         column_config={key: st.column_config.NumberColumn(format="dollar")
                        for key in df2.columns if key not in ["Lançamento", "Acerto"]},
-        row_height=28,
+        row_height=25,
     )
 
 with tab3:
@@ -168,7 +168,7 @@ with tab3:
             data=df3,
             use_container_width=True,
             column_config={key: st.column_config.NumberColumn(format="dollar") for key in df3.columns},
-            row_height=28,
+            row_height=25,
         )
 
 with tab4:
