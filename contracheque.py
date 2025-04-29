@@ -8,11 +8,11 @@ from streamlit.connections import SQLConnection
 
 locale.setlocale(locale.LC_ALL, "pt_BR.UTF-8")
 
+st.header(":material/payments: Contracheque BB")
+
 engine: SQLConnection = st.connection(name="AIVEN-PG", type=SQLConnection)
 
 sort_months: list[str] = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
-
-st.header(":material/payments: Contracheque BB")
 
 
 # captura o último período
@@ -119,16 +119,17 @@ with tab1:
     col1, col2 = st.columns([1, 2])
 
     with col1:
-        mes: int = st.slider(label="**Mês:**", min_value=1, max_value=12, value=take_month, key="slider_months")
+        st.slider(label="**Mês:**", min_value=1, max_value=12, value=take_month, key="slider_months")
 
-        ano: int = st.columns(2)[0].selectbox(
+        st.columns(2)[0].selectbox(
             label="**Ano:**",
             options=range(date.today().year, 2004, -1),
             index=0 if take_year == date.today().year else 1,
+            key="select_year",
         )
 
     with col2:
-        df1: pd.DataFrame = load_extract_monthly(ano, mes)
+        df1: pd.DataFrame = load_extract_monthly(st.session_state["select_year"], st.session_state["slider_months"])
 
         st.data_editor(
             data=df1,
@@ -136,11 +137,12 @@ with tab1:
             use_container_width=True,
             hide_index=True,
             column_config={"Valor": st.column_config.NumberColumn(format="dollar")},
+            key="de_monthly",
             row_height=25,
         )
 
 with tab2:
-    anual: int = st.slider(
+    st.slider(
         label="**Ano:**",
         min_value=2005,
         max_value=date.today().year,
@@ -148,7 +150,7 @@ with tab2:
         key="slider_years",
     )
 
-    df2: pd.DataFrame = load_extract_annual(anual)
+    df2: pd.DataFrame = load_extract_annual(st.session_state["slider_years"])
 
     st.data_editor(
         data=df2,
@@ -157,6 +159,7 @@ with tab2:
         hide_index=True,
         column_config={key: st.column_config.NumberColumn(format="dollar")
                        for key in df2.columns if key not in ["Lançamento", "Acerto"]},
+        key="de_annual",
         row_height=25,
     )
 
@@ -168,11 +171,12 @@ with tab3:
             data=df3,
             use_container_width=True,
             column_config={key: st.column_config.NumberColumn(format="dollar") for key in df3.columns},
+            key="de_total_annual",
             row_height=25,
         )
 
 with tab4:
-    slider_graphic: int = st.slider(
+    st.slider(
         label="**Ano:**",
         min_value=2005,
         max_value=date.today().year,
@@ -180,7 +184,7 @@ with tab4:
         key="slider_graphic",
     )
 
-    df4: pd.DataFrame = load_graphic_annual(slider_graphic)
+    df4: pd.DataFrame = load_graphic_annual(st.session_state["slider_graphic"])
 
     fig = go.Figure()
 
@@ -196,7 +200,7 @@ with tab4:
         )
 
     fig.update_layout(
-        title=f"Espelho - {slider_graphic}",
+        title=f"Espelho - {st.session_state['slider_graphic']}",
         xaxis=dict(
             showticklabels=True,
             title="",

@@ -6,9 +6,6 @@ import streamlit as st
 
 locale.setlocale(locale.LC_ALL, "pt_BR.UTF-8")
 
-if "xlsx_file" not in st.session_state:
-    st.session_state["xlsx_file"] = None
-
 minhas_apostas: list[str] = [
     "05 15 26 27 46 53",  # aposta n.° 1
     "03 12 19 20 45 47",  # aposta n.° 2
@@ -30,10 +27,12 @@ minhas_apostas: list[str] = [
     "01 16 21 34 49 54",  # aposta n.° 18
 ]
 
+st.header(":material/price_check: Mega-Sena")
+
 
 @st.cache_data(show_spinner="⏳Obtendo os dados, aguarde...")
-def load_megasena(xlsx_file: str) -> pd.DataFrame:
-    df: pd.DataFrame = pd.read_excel(io=xlsx_file, engine="openpyxl")
+def load_megasena() -> pd.DataFrame:
+    df: pd.DataFrame = pd.read_excel(io=st.session_state["xlsx_file"], engine="openpyxl")
 
     for coluna in df.columns[2:8]:
         df[coluna] = df[coluna].astype(str).str.zfill(2)
@@ -55,12 +54,10 @@ def load_megasena(xlsx_file: str) -> pd.DataFrame:
     return df
 
 
-st.header(":material/price_check: Mega-Sena")
-
-st.session_state["xlsx_file"] = st.columns(3)[0].file_uploader("Importar", type="xlsx", label_visibility="hidden")
+st.columns(3)[0].file_uploader("Importar", type="xlsx", key="xlsx_file", label_visibility="hidden")
 
 if st.session_state["xlsx_file"] and st.session_state["xlsx_file"].name == "Mega-Sena.xlsx":
-    megasena: pd.DataFrame = load_megasena(st.session_state["xlsx_file"])
+    megasena: pd.DataFrame = load_megasena()
 
     tab0, tab1, tab2, tab3, tab4 = st.tabs([
         "**Apostas Sorteadas**", "**Minhas apostas**", "**Sorteios da Mega-Sena**",
@@ -71,18 +68,18 @@ if st.session_state["xlsx_file"] and st.session_state["xlsx_file"].name == "Mega
         col = st.columns([1, 4])
 
         with col[0]:
-            mes: int = st.slider("**Mês:**", min_value=1, max_value=12, value=date.today().month)
-            ano: int = st.selectbox("**Ano:**", options=range(date.today().year, 1995, -1))
+            st.slider("**Mês:**", min_value=1, max_value=12, value=date.today().month, key="month_tab0")
+            st.selectbox("**Ano:**", options=range(date.today().year, 1995, -1), key="year_tab0")
 
         with col[1]:
-            all_megasena: pd.DataFrame = megasena[megasena["dt_sorteio"].dt.year.eq(ano) &
-                                                  megasena["dt_sorteio"].dt.month.eq(mes)].copy()
-            all_megasena["dt_sorteio"] = all_megasena["dt_sorteio"].dt.strftime("%x (%a)")
+            all_mega: pd.DataFrame = megasena[megasena["dt_sorteio"].dt.year.eq(st.session_state["year_tab0"]) &
+                                              megasena["dt_sorteio"].dt.month.eq(st.session_state["month_tab0"])].copy()
+            all_mega["dt_sorteio"] = all_mega["dt_sorteio"].dt.strftime("%x (%a)")
 
-            st.dataframe(
-                data=all_megasena,
-                hide_index=True,
+            st.data_editor(
+                data=all_mega,
                 use_container_width=True,
+                hide_index=True,
                 column_config={
                     "id_sorteio": st.column_config.NumberColumn(label="Concurso", format="%04d"),
                     "dt_sorteio": st.column_config.TextColumn(label="Data do Sorteio"),
@@ -94,6 +91,7 @@ if st.session_state["xlsx_file"] and st.session_state["xlsx_file"].name == "Mega
                     "acerto_4": st.column_config.NumberColumn(label="Acerto de 4"),
                     "rateio_4": st.column_config.NumberColumn(label="Rateio de 4", format="dollar"),
                 },
+                key="de_all_mega",
                 row_height=25,
             )
 
@@ -101,10 +99,12 @@ if st.session_state["xlsx_file"] and st.session_state["xlsx_file"].name == "Mega
         minhas: list[str] = [f"Aposta n.° {x + 1:02d} ➟ {" - ".join(aposta.split())}"
                              for x, aposta in enumerate(minhas_apostas)]
 
-        st.columns(3)[0].dataframe(
+        st.columns(3)[0].data_editor(
             data=minhas,
             use_container_width=True,
+            hide_index=True,
             column_config={"value": st.column_config.TextColumn(label="Minhas Apostas")},
+            key="de_apostas",
             row_height=25,
         )
 
@@ -113,7 +113,8 @@ if st.session_state["xlsx_file"] and st.session_state["xlsx_file"].name == "Mega
             for r in range(6, 3, -1):
                 st.write(f"**Acerto de {r} bolas**")
 
-                mega_copy: dict[str: list] = {"id_sorteio": [], "dt_sorteio": [], "bolas": [], "apostas": []}
+                mega_copy: dict[str, list[int | str]] = {"Concurso": [], "Data do Sorteio": [],
+                                                         "Suas bolas acertadas": [], "Sua aposta n.°": []}
 
                 for row in megasena[["id_sorteio", "dt_sorteio", "bolas", f"acerto_{r}", f"rateio_{r}"]].copy() \
                         .itertuples(index=False, name=None):
@@ -123,56 +124,51 @@ if st.session_state["xlsx_file"] and st.session_state["xlsx_file"].name == "Mega
                         match: list[str] = [bolas[x] for x in range(6) if bolas[x] in row[2]]
 
                         if len(match) == r:
-                            mega_copy["id_sorteio"].append(row[0])
-                            mega_copy["dt_sorteio"].append(row[1].strftime("%x (%a)"))
-                            mega_copy["bolas"].append(" ".join(match))
-                            mega_copy["apostas"].append(minhas_apostas.index(aposta) + 1)
+                            mega_copy["Concurso"].append(str(row[0]).zfill(4))
+                            mega_copy["Data do Sorteio"].append(row[1].strftime("%x (%a)"))
+                            mega_copy["Suas bolas acertadas"].append(" ".join(match))
+                            mega_copy["Sua aposta n.°"].append(minhas_apostas.index(aposta) + 1)
 
                 st.dataframe(
                     data=mega_copy,
                     use_container_width=True,
-                    column_config={
-                        "id_sorteio": st.column_config.NumberColumn(label="Concurso", format="%04d"),
-                        "dt_sorteio": st.column_config.TextColumn(label="Data do Sorteio"),
-                        "bolas": st.column_config.ListColumn(label="Suas bolas acertadas"),
-                        "apostas": st.column_config.NumberColumn(label="Sua aposta n.°"),
-                    },
+                    hide_index=True,
+                    key="de_acertas",
                     row_height=25,
                 )
 
     with tab3:
-        sua_aposta: str = st.columns(5)[0].text_input("Sua aposta:")
+        st.columns(5)[0].text_input("Sua aposta:", key="sua_aposta", placeholder="Ex: 01 02 03 04 05 06")
+
+        mega_copy2: dict[str, list[int | str]] = {"Concurso": [], "Data de Sorteio": [],
+                                            "Bolas Sorteadas": [], "Seus Acertos": []}
 
         with st.columns(3)[0]:
-            if st.button("**Acertei?**", type="primary"):
-                if sua_aposta:
+            if st.button("**Acertei?**", key="btn_acertas", type="primary"):
+                if st.session_state["sua_aposta"]:
                     with st.spinner("Obtendo as apostas, aguarde...", show_time=True):
-                        mega_copy2 = {"id_sorteio": [], "dt_sorteio": [], "bolas": [], "acertos": []}
-
                         for row in megasena.copy().itertuples(index=False, name=None):
-                            match: list[str] = [aposta for aposta in sua_aposta.split() if aposta in row[2]]
+                            match: list[str] = [aposta for aposta in st.session_state["sua_aposta"].split()
+                                                if aposta in row[2]]
 
                             if len(match) >= 4:
-                                mega_copy2["id_sorteio"].append(row[0])
-                                mega_copy2["dt_sorteio"].append(row[1].strftime("%x (%a)"))
-                                mega_copy2["bolas"].append(row[2])
-                                mega_copy2["acertos"].append(len(match))
+                                mega_copy2["Concurso"].append(str(row[0]).zfill(4))
+                                mega_copy2["Data de Sorteio"].append(row[1].strftime("%x (%a)"))
+                                mega_copy2["Bolas Sorteadas"].append(row[2])
+                                mega_copy2["Seus Acertos"].append(len(match))
 
-                        st.dataframe(
-                            data=mega_copy2,
-                            use_container_width=True,
-                            column_config={
-                                "id_sorteio": st.column_config.NumberColumn(label="Concurso", format="%04d"),
-                                "dt_sorteio": st.column_config.TextColumn(label="Data de Sorteio"),
-                                "bolas": st.column_config.ListColumn(label="Bolas Sorteadas"),
-                                "acertos": st.column_config.NumberColumn(label="Seus acertos"),
-                            },
-                            row_height=25,
-                        )
-
-                    st.button("**Recomeçar**", type="primary")
                 else:
-                    st.toast("**Preencha suas bolas!**")
+                    st.toast("**Preencha suas bolas!**", icon=":material/warning:")
+                    st.stop()
+
+        with st.columns([2.5, 1.5])[0]:
+            st.data_editor(
+                data=mega_copy2,
+                use_container_width=True,
+                hide_index=True,
+                key="de_acertas",
+                row_height=25,
+            )
 
     with tab4:
         mega_da_virada: pd.DataFrame = megasena.copy()
@@ -183,7 +179,7 @@ if st.session_state["xlsx_file"] and st.session_state["xlsx_file"].name == "Mega
             drop(["ano"], axis=1)
         mega_da_virada["dt_sorteio"] = mega_da_virada["dt_sorteio"].dt.strftime("%x (%a)")
 
-        st.dataframe(
+        st.data_editor(
             data=mega_da_virada,
             use_container_width=True,
             hide_index=True,
@@ -198,5 +194,6 @@ if st.session_state["xlsx_file"] and st.session_state["xlsx_file"].name == "Mega
                 "acerto_4": st.column_config.NumberColumn(label="Acerto de 4"),
                 "rateio_4": st.column_config.NumberColumn(label="Rateio de 4", format="dollar"),
             },
+            key="de_mega_da_virada",
             row_height=25,
         )

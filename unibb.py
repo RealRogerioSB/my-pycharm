@@ -25,24 +25,25 @@ def load_duplicity() -> pd.DataFrame:
 
 tab1, tab2 = st.tabs(["**Cursos da UniBB**", "**Cursos Duplicados**"])
 
-with tab1:
+with tab1, st.columns([3, 1])[0]:
     st.data_editor(
         data=load_unibb(),
         use_container_width=True,
         hide_index=True,
         column_config={
-            "id": st.column_config.NumberColumn(label="Index", required=True, width="small"),
-            "id_curso": st.column_config.NumberColumn(label="Código", required=True, width="small"),
-            "nm_curso": st.column_config.TextColumn(label="Curso", required=True, width="large"),
-            "hr_curso": st.column_config.NumberColumn(label="Horas", required=True, width="small"),
+            "id": st.column_config.NumberColumn(label="Index", width="small"),
+            "id_curso": st.column_config.NumberColumn(label="Código", width="small"),
+            "nm_curso": st.column_config.TextColumn(label="Curso", width="large"),
+            "hr_curso": st.column_config.NumberColumn(label="Horas", width="small"),
         },
+        key="de_unibb",
         row_height=25,
     )
 
-    if st.button("**Adicionar**", type="primary", icon=":material/add_circle:"):
+    if st.button("**Adicionar**", key="add_unibb", type="primary", icon=":material/add_circle:"):
         pass
 
-with tab2:
+with tab2, st.columns([3, 1])[0]:
     st.data_editor(
         data=load_duplicity(),
         use_container_width=True,
@@ -53,5 +54,6 @@ with tab2:
             "nm_curso": st.column_config.TextColumn(label="Curso", width="large"),
             "hr_curso": st.column_config.NumberColumn(label="Horas", width="small"),
         },
+        key="de_duplicity",
         row_height=25,
     )
