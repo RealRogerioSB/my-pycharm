@@ -15,7 +15,7 @@ st.markdown(
 
 st.navigation(
     pages={
-        "Home": [
+        "Meus Apps": [
             st.Page(page="contracheque.py", title="Meu Contracheque BB", icon=":material/payments:"),
             st.Page(page="megasena.py", title="Sorteio de Mega-Sena", icon=":material/price_check:"),
             st.Page(page="unibb.py", title="Meus Cursos UniBB", icon=":material/book_5:"),

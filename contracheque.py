@@ -8,7 +8,7 @@ from streamlit.connections import SQLConnection
 
 locale.setlocale(locale.LC_ALL, "pt_BR.UTF-8")
 
-st.header(":material/payments: Contracheque BB")
+st.cache_data.clear()
 
 engine: SQLConnection = st.connection(name="AIVEN-PG", type=SQLConnection)
 
