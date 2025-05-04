@@ -2,8 +2,10 @@ import locale
 from datetime import date
 
 import pandas as pd
-import plotly.graph_objects as go
+import matplotlib.pyplot as plt
+import seaborn as sns
 import streamlit as st
+from matplotlib.container import BarContainer
 from streamlit.connections import SQLConnection
 
 locale.setlocale(locale.LC_ALL, "pt_BR.UTF-8")
@@ -94,8 +96,8 @@ def load_total_annual() -> pd.DataFrame:
 
 
 # gráfico anual
-@st.cache_data(show_spinner="**⏳Obtendo os dados, aguarde...**")
-def load_graphic_annual(receive_year: int) -> pd.DataFrame:
+@st.cache_resource(show_spinner="**⏳Obtendo os dados, aguarde...**")
+def load_graphic_annual(receive_year: int) -> plt.Figure:
     load: pd.DataFrame = engine.query(
         sql="""SELECT e.período, SUM(e.valor) AS valor
                FROM espelho e
@@ -107,10 +109,26 @@ def load_graphic_annual(receive_year: int) -> pd.DataFrame:
         params=dict(get_year=receive_year),
     )
     load["mês"] = pd.to_datetime(load["período"], format="%Y%m").dt.strftime("%b")
-    load = load.pivot(columns="mês", values="valor").reset_index()
+    load = load.pivot(columns="mês", values="valor")
     load = load.reindex(columns=[month for month in sort_months if month in load.columns])
 
-    return load
+    fig, ax = plt.subplots(figsize=(16, 6))
+    plt.style.use("ggplot")
+
+    ax = sns.barplot(data=load)
+    ax.set_title(label=f"Espelho - {receive_year}", loc="center", fontweight="bold", fontsize=12)
+    ax.set(xlabel="", ylabel="", yticks=[])
+
+    for container in ax.containers:
+        if isinstance(container, BarContainer):
+            ax.bar_label(
+                container=container,
+                fmt=lambda i: locale.currency(val=i, symbol=False, grouping=True),
+                fontweight="bold",
+                fontsize=10,
+            )
+
+    return fig
 
 
 tab1, tab2, tab3, tab4 = st.tabs(["**Extrato Mensal**", "**Extrato Anual**", "**Total Anual**", "**Gráfico**"])
@@ -184,40 +202,6 @@ with tab4:
         key="slider_graphic",
     )
 
-    df4: pd.DataFrame = load_graphic_annual(st.session_state["slider_graphic"])
+    df4: plt.Figure = load_graphic_annual(st.session_state["slider_graphic"])
 
-    fig = go.Figure()
-
-    for mes in df4.columns:
-        fig.add_trace(
-            go.Bar(
-                x=[mes],
-                y=[df4[mes].sum()],
-                text=locale.currency(df4[mes].sum(), grouping=True),
-                textposition="outside",
-                marker=dict(color=f"rgba({hash(mes) % 255}, {hash(mes) % 200}, {hash(mes) % 150}, 2.0)"),
-            )
-        )
-
-    fig.update_layout(
-        title=f"Espelho - {st.session_state['slider_graphic']}",
-        xaxis=dict(
-            showticklabels=True,
-            title="",
-            tickfont=dict(size=14, color="black"),
-        ),
-        yaxis=dict(visible=False),
-        plot_bgcolor="white",
-        paper_bgcolor="white",
-        title_font=dict(size=24, color="black", family="Helvetica"),
-        margin=dict(t=50, b=30, l=30, r=30),
-        showlegend=False,
-    )
-
-    # mais refinamentos visuais
-    fig.update_traces(
-        marker_line_width=1.5,
-        marker_line_color="rgba(0, 0, 0, 0.5)",
-    )
-
-    st.plotly_chart(fig, use_container_width=True)
+    st.pyplot(df4, use_container_width=True)
