@@ -17,13 +17,12 @@ engine: SQLConnection = st.connection(name="AIVEN-PG", type=SQLConnection)
 sort_months: list[str] = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
 
 
-# captura o último período
 @st.cache_data(show_spinner="⏳Obtendo os dados, aguarde...")
 def last_period() -> int:
     return engine.query(
-        sql="SELECT DISTINCT MAX(período) AS MAX_PERIOD FROM espelho",
+        sql="SELECT DISTINCT MAX(e.período) AS MAX_PERIOD FROM espelho e",
         show_spinner=False,
-        ttl=60
+        ttl=0
     )["max_period"].iloc[0]
 
 
@@ -31,7 +30,6 @@ take_year: int = int(last_period() / 100)
 take_month: int = last_period() % 100
 
 
-# extrato mensal
 @st.cache_data(show_spinner="**⏳Obtendo os dados, aguarde...**")
 def load_extract_monthly(receive_year: int, receive_month: int) -> pd.DataFrame:
     load: pd.DataFrame = engine.query(
@@ -41,7 +39,7 @@ def load_extract_monthly(receive_year: int, receive_month: int) -> pd.DataFrame:
                  AND e.período % 100 = :get_month
                ORDER BY e.período, e.acerto DESC, e.valor DESC""",
         show_spinner=False,
-        ttl=60,
+        ttl=0,
         params=dict(get_year=receive_year, get_month=receive_month),
     )
     load.columns = [str(coluna).capitalize() for coluna in load.columns]
@@ -50,7 +48,6 @@ def load_extract_monthly(receive_year: int, receive_month: int) -> pd.DataFrame:
     return load
 
 
-# extrato anual
 @st.cache_data(show_spinner="**⏳Obtendo os dados, aguarde...**")
 def load_extract_annual(receive_year: int) -> pd.DataFrame:
     load: pd.DataFrame = engine.query(
@@ -58,7 +55,7 @@ def load_extract_annual(receive_year: int) -> pd.DataFrame:
                FROM espelho e INNER JOIN lançamento l ON l.id_lançamento = e.id_lançamento
                WHERE e.período / 100 = :get_year""",
         show_spinner=False,
-        ttl=60,
+        ttl=0,
         params=dict(get_year=receive_year),
     )
     load.columns = [str(coluna).capitalize() for coluna in load.columns]
@@ -74,7 +71,6 @@ def load_extract_annual(receive_year: int) -> pd.DataFrame:
     return load
 
 
-# total anual
 @st.cache_data(show_spinner="**⏳Obtendo os dados, aguarde...**")
 def load_total_annual() -> pd.DataFrame:
     load: pd.DataFrame = engine.query(
@@ -83,7 +79,7 @@ def load_total_annual() -> pd.DataFrame:
                GROUP BY e.período
                ORDER BY e.período""",
         show_spinner=False,
-        ttl=60,
+        ttl=0,
     )
     load["Ano"] = pd.to_datetime(load["período"], format="%Y%m").dt.year
     load["Mês"] = pd.to_datetime(load["período"], format="%Y%m").dt.strftime("%b")
@@ -93,42 +89,6 @@ def load_total_annual() -> pd.DataFrame:
     load["Total"] = load[load.columns[:-1]].sum(axis=1)
 
     return load
-
-
-# gráfico anual
-@st.cache_resource(show_spinner="**⏳Obtendo os dados, aguarde...**")
-def load_graphic_annual(receive_year: int) -> plt.Figure:
-    load: pd.DataFrame = engine.query(
-        sql="""SELECT e.período, SUM(e.valor) AS valor
-               FROM espelho e
-               WHERE e.período / 100 = :get_year
-               GROUP BY e.período
-               ORDER BY e.período""",
-        show_spinner=False,
-        ttl=60,
-        params=dict(get_year=receive_year),
-    )
-    load["mês"] = pd.to_datetime(load["período"], format="%Y%m").dt.strftime("%b")
-    load = load.pivot(columns="mês", values="valor")
-    load = load.reindex(columns=[month for month in sort_months if month in load.columns])
-
-    fig, ax = plt.subplots(figsize=(16, 6))
-    plt.style.use("ggplot")
-
-    ax = sns.barplot(data=load)
-    ax.set_title(label=f"Espelho - {receive_year}", loc="center", fontweight="bold", fontsize=12)
-    ax.set(xlabel="", ylabel="", yticks=[])
-
-    for container in ax.containers:
-        if isinstance(container, BarContainer):
-            ax.bar_label(
-                container=container,
-                fmt=lambda i: locale.currency(val=i, symbol=False, grouping=True),
-                fontweight="bold",
-                fontsize=10,
-            )
-
-    return fig
 
 
 tab1, tab2, tab3, tab4 = st.tabs(["**Extrato Mensal**", "**Extrato Anual**", "**Total Anual**", "**Gráfico**"])
@@ -202,6 +162,23 @@ with tab4:
         key="slider_graphic",
     )
 
-    df4: plt.Figure = load_graphic_annual(st.session_state["slider_graphic"])
+    df4: pd.DataFrame = load_total_annual()
+    df4 = df4[df4.columns[:-2]]
 
-    st.pyplot(df4, use_container_width=True)
+    fig, ax = plt.subplots(figsize=(16, 6))
+    plt.style.use("ggplot")
+
+    ax = sns.barplot(data=df4.loc[st.session_state["slider_graphic"]])
+    ax.set_title(label=f"Espelho - {st.session_state["slider_graphic"]}", loc="center", fontweight="bold", fontsize=12)
+    ax.set(xlabel="", ylabel="", yticks=[])
+
+    for container in ax.containers:
+        if isinstance(container, BarContainer):
+            ax.bar_label(
+                container=container,
+                fmt=lambda i: locale.currency(val=i, symbol=False, grouping=True),
+                fontweight="bold",
+                fontsize=10,
+            )
+
+    st.pyplot(plt, use_container_width=True)
