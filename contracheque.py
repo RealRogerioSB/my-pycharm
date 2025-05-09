@@ -1,4 +1,5 @@
 import locale
+import time
 from datetime import date
 
 import pandas as pd
@@ -18,6 +19,17 @@ sort_months: list[str] = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago"
 
 
 @st.cache_data(show_spinner="⏳Obtendo os dados, aguarde...")
+def get_release() -> dict[int: str]:
+    load = engine.query(
+        sql="SELECT id_lançamento, lançamento FROM lançamento ORDER BY lançamento",
+        show_spinner=False,
+        ttl=0
+    )
+
+    return {key: value for key, value in zip(load["id_lançamento"].to_list(), load["lançamento"].to_list())}
+
+
+@st.cache_data(show_spinner="⏳Obtendo os dados, aguarde...")
 def last_period() -> int:
     return engine.query(
         sql="SELECT DISTINCT MAX(e.período) AS MAX_PERIOD FROM espelho e",
@@ -30,7 +42,7 @@ take_year: int = int(last_period() / 100)
 take_month: int = last_period() % 100
 
 
-@st.cache_data(show_spinner="**⏳Obtendo os dados, aguarde...**")
+@st.cache_data(show_spinner="⏳Obtendo os dados, aguarde...")
 def load_extract_monthly(receive_year: int, receive_month: int) -> pd.DataFrame:
     load: pd.DataFrame = engine.query(
         sql="""SELECT l.lançamento, e.período, e.acerto, e.valor
@@ -48,7 +60,7 @@ def load_extract_monthly(receive_year: int, receive_month: int) -> pd.DataFrame:
     return load
 
 
-@st.cache_data(show_spinner="**⏳Obtendo os dados, aguarde...**")
+@st.cache_data(show_spinner="⏳Obtendo os dados, aguarde...")
 def load_extract_annual(receive_year: int) -> pd.DataFrame:
     load: pd.DataFrame = engine.query(
         sql="""SELECT l.lançamento, e.período, e.acerto, e.valor
@@ -71,7 +83,7 @@ def load_extract_annual(receive_year: int) -> pd.DataFrame:
     return load
 
 
-@st.cache_data(show_spinner="**⏳Obtendo os dados, aguarde...**")
+@st.cache_data(show_spinner="⏳Obtendo os dados, aguarde...")
 def load_total_annual() -> pd.DataFrame:
     load: pd.DataFrame = engine.query(
         sql="""SELECT e.período, SUM(e.valor) AS valor
@@ -91,6 +103,36 @@ def load_total_annual() -> pd.DataFrame:
     return load
 
 
+@st.dialog(title=f"Inclusão de Contracheque do Mês de {date.today():%B}", width="large")
+def new_data():
+    de_new = st.data_editor(
+        data=pd.DataFrame(columns=["id_lançamento", "período", "acerto", "valor"]),
+        use_container_width=True,
+        column_config={
+            "id_lançamento": st.column_config.SelectboxColumn(
+                label="Index",
+                width="large",
+                options=get_release().values()
+            ),
+            "período": st.column_config.NumberColumn(label="Período", min_value=200507, max_value=203012, default=202505),
+            "acerto": st.column_config.CheckboxColumn(label="Acerto"),
+            "valor": st.column_config.NumberColumn(label="Valor", format="dollar"),
+        },
+        num_rows="dynamic",
+    )
+
+    st.button(label="**Salvar**", type="primary", icon=":material/save:")
+
+    if de_new.empty:
+        st.toast("**Preencha os dados do contracheque.**", icon=":material/warning:")
+
+    else:
+        de_new.to_sql(name="espelho", con=engine, if_exists="append", index=False)
+        st.toast("**Inclusão do novo contracheque com sucesso!.**", icon=":material/check_circle:")
+        time.sleep(2)
+        st.rerun()
+
+
 tab1, tab2, tab3, tab4 = st.tabs(["**Extrato Mensal**", "**Extrato Anual**", "**Total Anual**", "**Gráfico**"])
 
 with tab1:
@@ -105,6 +147,9 @@ with tab1:
             index=0 if take_year == date.today().year else 1,
             key="select_year",
         )
+
+        st.button(label="**Incluir no Contracheque**", key="insert", type="primary",
+                  icon=":material/add_circle:", on_click=new_data)
 
     with col2:
         df1: pd.DataFrame = load_extract_monthly(st.session_state["select_year"], st.session_state["slider_months"])
@@ -168,7 +213,7 @@ with tab4:
     fig, ax = plt.subplots(figsize=(16, 6))
     plt.style.use("ggplot")
 
-    ax = sns.barplot(data=df4.loc[st.session_state["slider_graphic"]])
+    axe = sns.barplot(data=df4.loc[st.session_state["slider_graphic"]])
     ax.set_title(label=f"Espelho - {st.session_state["slider_graphic"]}", loc="center", fontweight="bold", fontsize=12)
     ax.set(xlabel="", ylabel="", yticks=[])
 
