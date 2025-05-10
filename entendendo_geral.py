@@ -693,6 +693,47 @@ def fun1():
 fun1()
 
 # %%
+import sys
+from functools import wraps
+from time import perf_counter
+
+
+def fast(func):
+    cache = {}
+
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        key = str(args) + str(kwargs)
+
+        if key not in cache:
+            cache[key] = func(*args, **kwargs)
+
+        return cache[key]
+
+    return wrapper
+
+
+@fast
+def fibonacci(n: int) -> int:
+    if n <= 1:
+        return n
+
+    else:
+        return fibonacci(n - 1) + fibonacci(n - 2)
+
+
+if __name__ == '__main__':
+    sys.setrecursionlimit(int(1e6))
+
+    x: int = 1000
+
+    start_time: float = perf_counter()
+    result: int = fibonacci(x)
+    end_time: float = perf_counter()
+
+    print(f"Fibonacci({x}) = {result}\nTempo de execução: {end_time - start_time:.8f} segundos")
+
+# %%
 # import wget
 
 # link = ""

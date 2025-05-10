@@ -3,10 +3,8 @@ import time
 from datetime import date
 
 import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
+import plotly.express as px
 import streamlit as st
-from matplotlib.container import BarContainer
 from streamlit.connections import SQLConnection
 
 locale.setlocale(locale.LC_ALL, "pt_BR.UTF-8")
@@ -113,7 +111,7 @@ def new_data():
             ),
             "período": st.column_config.NumberColumn(
                 label="Período",
-                default=202505,
+                default=date.today().year * 100 + date.today().month,
                 min_value=200507,
                 max_value=203012,
                 required=True,
@@ -211,23 +209,39 @@ with tab4:
         key="slider_graphic",
     )
 
-    df4: pd.DataFrame = load_total_annual()
-    df4 = df4[df4.columns[:-2]]
+    df4: pd.DataFrame = load_total_annual().drop(["Média", "Total"], axis=1) \
+        .loc[st.session_state["slider_graphic"]].reset_index()
+    df4 = df4.rename(columns={st.session_state["slider_graphic"]: "salário"})
+    df4["salário"] = df4["salário"].apply(lambda val: locale.format_string("%.2f", val, grouping=True))
 
-    fig, _ = plt.subplots(figsize=(16, 6))
-    plt.style.use("ggplot")
+    fig = px.bar(
+        data_frame=df4,  # define o DataFrame como fonte de dados para o gráfico
+        x="Mês",  # define os meses como eixo X
+        y="salário",  # define os salários como eixo Y
+        title=f"Espelho {st.session_state["slider_graphic"]}",  # define o título do gráfico
+        text=df4["salário"],  # exibe os valores salariais formatados no padrão brasileiro sobre as barras
+        color="salário",  # define a cor das barras com base nos valores salariais
+        color_continuous_scale="Viridis"  # aplica um esquema de cor gradiente ao gráfico
+    )
 
-    axe: plt.Axes = sns.barplot(data=df4.loc[st.session_state["slider_graphic"]])
-    axe.set_title(label=f"Espelho - {st.session_state["slider_graphic"]}", loc="center", fontweight="bold", fontsize=12)
-    axe.set(xlabel="", ylabel="", yticks=[])
+    # ajusta elementos visuais do layout do gráfico
+    fig.update_layout(
+        xaxis_title="",  # remove o título do eixo X
+        yaxis_title="",  # remove o título do eixo Y
+        xaxis=dict(
+            showline=True,  # adiciona uma linha no eixo X abaixo dos meses
+            linewidth=1,  # define a espessura da linha do eixo X
+            linecolor="gray",  # define a cor da linha do eixo X
+            showgrid=True  # exibe uma grade de fundo para facilitar a leitura dos valores
+        ),
+        yaxis=dict(showticklabels=False),  # exibe os marcadores de valor no eixo Y
+        showlegend=False,  # remove a legenda do gráfico
+        coloraxis_showscale=True,  # exibe a escala de cores ao lado do gráfico
+        template="presentation",  # aplica um tema mais profissional ao gráfico
+        margin=dict(l=0, r=0, t=25, b=0),  # define as margens do gráfico
+        font=dict(size=13, color="black"),  # define o tamanho e a cor da fonte utilizada
+    )
 
-    for container in axe.containers:
-        if isinstance(container, BarContainer):
-            axe.bar_label(
-                container=container,
-                fmt=lambda i: locale.currency(val=i, symbol=False, grouping=True),
-                fontweight="bold",
-                fontsize=10,
-            )
+    fig.update_traces(textposition="outside")  # posiciona os valores acima de cada barra para melhor legibilidade
 
-    st.pyplot(plt, use_container_width=True)
+    st.plotly_chart(fig, use_container_width=True)
