@@ -5,8 +5,6 @@ import streamlit as st
 from sqlalchemy import text
 from streamlit.connections import SQLConnection
 
-st.cache_data.clear()
-
 engine: SQLConnection = st.connection(name="AIVEN-PG", type=SQLConnection)
 
 

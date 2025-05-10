@@ -11,8 +11,6 @@ from streamlit.connections import SQLConnection
 
 locale.setlocale(locale.LC_ALL, "pt_BR.UTF-8")
 
-st.cache_data.clear()
-
 engine: SQLConnection = st.connection(name="AIVEN-PG", type=SQLConnection)
 
 sort_months: list[str] = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
@@ -72,9 +70,7 @@ def load_extract_annual(receive_year: int) -> pd.DataFrame:
     )
     load.columns = [str(coluna).capitalize() for coluna in load.columns]
     load["Mês"] = pd.to_datetime(load["Período"], format="%Y%m").dt.strftime("%b")
-    load = load.pivot(columns="Mês", index=["Lançamento", "Acerto"], values="Valor") \
-        .reset_index() \
-        .fillna(value=0)
+    load = load.pivot(columns="Mês", index=["Lançamento", "Acerto"], values="Valor").reset_index().fillna(value=0)
     load = load.reindex(columns=["Lançamento", "Acerto"] + [month for month in sort_months if month in load.columns])
     load["Média"] = load.mean(axis=1, numeric_only=True)
     load["Total"] = load[load.columns[1:-1]].sum(axis=1)
@@ -110,27 +106,35 @@ def new_data():
         use_container_width=True,
         column_config={
             "id_lançamento": st.column_config.SelectboxColumn(
-                label="Index",
+                label="Lançamento",
                 width="large",
-                options=get_release().values()
+                required=True,
+                options=get_release().values(),
             ),
-            "período": st.column_config.NumberColumn(label="Período", min_value=200507, max_value=203012, default=202505),
-            "acerto": st.column_config.CheckboxColumn(label="Acerto"),
-            "valor": st.column_config.NumberColumn(label="Valor", format="dollar"),
+            "período": st.column_config.NumberColumn(
+                label="Período",
+                default=202505,
+                min_value=200507,
+                max_value=203012,
+                required=True,
+            ),
+            "acerto": st.column_config.CheckboxColumn(label="Acerto", required=True, default=False),
+            "valor": st.column_config.NumberColumn(label="Valor", required=True, default=0.0, format="dollar"),
         },
         num_rows="dynamic",
     )
 
-    st.button(label="**Salvar**", type="primary", icon=":material/save:")
+    st.button(label="**Salvar**", key="save", type="primary", icon=":material/save:")
 
-    if de_new.empty:
-        st.toast("**Preencha os dados do contracheque.**", icon=":material/warning:")
+    if st.session_state["save"]:
+        if de_new.empty:
+            st.toast("**Preencha os dados do contracheque.**", icon=":material/error:")
 
-    else:
-        de_new.to_sql(name="espelho", con=engine, if_exists="append", index=False)
-        st.toast("**Inclusão do novo contracheque com sucesso!.**", icon=":material/check_circle:")
-        time.sleep(2)
-        st.rerun()
+        else:
+            de_new.to_sql(name="espelho", con=engine, if_exists="append", index=False)
+            st.toast("**Inclusão do novo contracheque com sucesso!**", icon=":material/check_circle:")
+            time.sleep(2)
+            st.rerun()
 
 
 tab1, tab2, tab3, tab4 = st.tabs(["**Extrato Mensal**", "**Extrato Anual**", "**Total Anual**", "**Gráfico**"])
@@ -210,16 +214,16 @@ with tab4:
     df4: pd.DataFrame = load_total_annual()
     df4 = df4[df4.columns[:-2]]
 
-    fig, ax = plt.subplots(figsize=(16, 6))
+    fig, _ = plt.subplots(figsize=(16, 6))
     plt.style.use("ggplot")
 
-    axe = sns.barplot(data=df4.loc[st.session_state["slider_graphic"]])
-    ax.set_title(label=f"Espelho - {st.session_state["slider_graphic"]}", loc="center", fontweight="bold", fontsize=12)
-    ax.set(xlabel="", ylabel="", yticks=[])
+    axe: plt.Axes = sns.barplot(data=df4.loc[st.session_state["slider_graphic"]])
+    axe.set_title(label=f"Espelho - {st.session_state["slider_graphic"]}", loc="center", fontweight="bold", fontsize=12)
+    axe.set(xlabel="", ylabel="", yticks=[])
 
-    for container in ax.containers:
+    for container in axe.containers:
         if isinstance(container, BarContainer):
-            ax.bar_label(
+            axe.bar_label(
                 container=container,
                 fmt=lambda i: locale.currency(val=i, symbol=False, grouping=True),
                 fontweight="bold",

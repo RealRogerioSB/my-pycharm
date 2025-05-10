@@ -27,8 +27,6 @@ minhas_apostas: list[str] = [
     "01 16 21 34 49 54",  # aposta n.° 18
 ]
 
-st.cache_data.clear()
-
 
 @st.cache_data(show_spinner="⏳Obtendo os dados, aguarde...")
 def load_megasena() -> pd.DataFrame:
