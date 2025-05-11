@@ -4,6 +4,7 @@ from datetime import date
 
 import pandas as pd
 import plotly.express as px
+from sqlalchemy import text
 import streamlit as st
 from streamlit.connections import SQLConnection
 
@@ -97,11 +98,12 @@ def load_total_annual() -> pd.DataFrame:
     return load
 
 
-@st.dialog(title=f"Inclusão de Contracheque do Mês de {date.today():%B}", width="large")
+@st.dialog(title=f"Inclusão do Mês de {date.today():%B}", width="large")
 def new_data():
-    de_new = st.data_editor(
+    st.data_editor(
         data=pd.DataFrame(columns=["id_lançamento", "período", "acerto", "valor"]),
         use_container_width=True,
+        hide_index=True,
         column_config={
             "id_lançamento": st.column_config.SelectboxColumn(
                 label="Lançamento",
@@ -112,27 +114,54 @@ def new_data():
             "período": st.column_config.NumberColumn(
                 label="Período",
                 default=date.today().year * 100 + date.today().month,
-                min_value=200507,
+                min_value=200001,
                 max_value=203012,
                 required=True,
             ),
-            "acerto": st.column_config.CheckboxColumn(label="Acerto", required=True, default=False),
-            "valor": st.column_config.NumberColumn(label="Valor", required=True, default=0.0, format="dollar"),
+            "acerto": st.column_config.CheckboxColumn(
+                label="Acerto",
+                required=True,
+                default=False
+            ),
+            "valor": st.column_config.NumberColumn(
+                label="Valor",
+                required=True,
+                default=0.0,
+                format="dollar"
+            ),
         },
+        key="editor",
         num_rows="dynamic",
     )
 
-    st.button(label="**Salvar**", key="save", type="primary", icon=":material/save:")
+    if st.button("Salvar", type="primary", icon=":material/save:"):
+        if not st.session_state["editor"]["added_rows"]:
+            st.toast("**Preencha os dados do registro.**", icon=":material/error:")
+            st.stop()
 
-    if st.session_state["save"]:
-        if de_new.empty:
-            st.toast("**Preencha os dados do contracheque.**", icon=":material/error:")
+        for row in st.session_state["editor"]["added_rows"]:
+            for chave, valor in get_release().items():
+                if valor == row["id_lançamento"]:
+                    row["id_lançamento"] = chave
+                    break
 
-        else:
-            de_new.to_sql(name="espelho", con=engine, if_exists="append", index=False)
-            st.toast("**Inclusão do novo contracheque com sucesso!**", icon=":material/check_circle:")
-            time.sleep(2)
-            st.rerun()
+        with engine.session as session:
+            for row in st.session_state["editor"]["added_rows"]:
+                session.execute(
+                    statement=text("INSERT INTO espelho (id_lançamento, período, acerto, valor) "
+                                   "VALUES (:id_lançamento, :período, :acerto, :valor)"),
+                    params=dict(
+                        id_lançamento=row["id_lançamento"],
+                        período=row["período"],
+                        acerto=row["acerto"],
+                        valor=row["valor"],
+                    ),
+                )
+            session.commit()
+
+        st.toast("**Inclusão do novo registro com sucesso!**", icon=":material/check_circle:")
+        time.sleep(2)
+        st.rerun()
 
 
 tab1, tab2, tab3, tab4 = st.tabs(["**Extrato Mensal**", "**Extrato Anual**", "**Total Anual**", "**Gráfico**"])
@@ -154,16 +183,12 @@ with tab1:
                   icon=":material/add_circle:", on_click=new_data)
 
     with col2:
-        df1: pd.DataFrame = load_extract_monthly(st.session_state["select_year"], st.session_state["slider_months"])
-
         st.data_editor(
-            data=df1,
-            height=318,
+            data=load_extract_monthly(st.session_state["select_year"], st.session_state["slider_months"]),
             use_container_width=True,
             hide_index=True,
             column_config={"Valor": st.column_config.NumberColumn(format="dollar")},
             key="de_monthly",
-            row_height=25,
         )
 
 with tab2:
@@ -179,13 +204,11 @@ with tab2:
 
     st.data_editor(
         data=df2,
-        height=318,
         use_container_width=True,
         hide_index=True,
         column_config={key: st.column_config.NumberColumn(format="dollar")
                        for key in df2.columns if key not in ["Lançamento", "Acerto"]},
         key="de_annual",
-        row_height=25,
     )
 
 with tab3:
@@ -197,7 +220,6 @@ with tab3:
             use_container_width=True,
             column_config={key: st.column_config.NumberColumn(format="dollar") for key in df3.columns},
             key="de_total_annual",
-            row_height=25,
         )
 
 with tab4:
@@ -238,7 +260,7 @@ with tab4:
         showlegend=False,  # remove a legenda do gráfico
         coloraxis_showscale=True,  # exibe a escala de cores ao lado do gráfico
         template="presentation",  # aplica um tema mais profissional ao gráfico
-        margin=dict(l=0, r=0, t=25, b=0),  # define as margens do gráfico
+        margin=dict(l=0, r=0, t=30, b=0),  # define as margens do gráfico
         font=dict(size=13, color="black"),  # define o tamanho e a cor da fonte utilizada
     )
 
