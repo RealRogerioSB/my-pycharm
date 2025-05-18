@@ -28,7 +28,7 @@ def get_release() -> dict[str: int]:
 @st.cache_data(show_spinner="⏳Obtendo os dados, aguarde...")
 def last_period() -> int:
     return engine.query(
-        sql="SELECT DISTINCT MAX(e.período) AS MAX_PERIOD FROM espelho e",
+        sql="SELECT DISTINCT MAX(período) AS MAX_PERIOD FROM contracheque",
         show_spinner=False,
         ttl=0
     )["max_period"].iloc[0]
@@ -41,11 +41,11 @@ take_month: int = last_period() % 100
 @st.cache_data(show_spinner="⏳Obtendo os dados, aguarde...")
 def load_extract_monthly(receive_year: int, receive_month: int) -> pd.DataFrame:
     load: pd.DataFrame = engine.query(
-        sql="""SELECT l.lançamento, e.período, e.acerto, e.valor
-               FROM espelho e INNER JOIN lançamento l ON l.id_lançamento = e.id_lançamento
-               WHERE e.período / 100 = :get_year
-                 AND e.período % 100 = :get_month
-               ORDER BY e.período, e.acerto DESC, e.valor DESC""",
+        sql="""SELECT l.lançamento, c.período, c.acerto, c.valor
+               FROM contracheque c INNER JOIN lançamento l ON l.id_lançamento = c.id_lançamento
+               WHERE c.período / 100 = :get_year
+                 AND c.período % 100 = :get_month
+               ORDER BY c.período, c.acerto DESC, c.valor DESC""",
         show_spinner=False,
         ttl=0,
         params=dict(get_year=receive_year, get_month=receive_month),
@@ -59,9 +59,9 @@ def load_extract_monthly(receive_year: int, receive_month: int) -> pd.DataFrame:
 @st.cache_data(show_spinner="⏳Obtendo os dados, aguarde...")
 def load_extract_annual(receive_year: int) -> pd.DataFrame:
     load: pd.DataFrame = engine.query(
-        sql="""SELECT l.lançamento, e.período, e.acerto, e.valor
-               FROM espelho e INNER JOIN lançamento l ON l.id_lançamento = e.id_lançamento
-               WHERE e.período / 100 = :get_year""",
+        sql="""SELECT l.lançamento, c.período, c.acerto, c.valor
+               FROM contracheque c INNER JOIN lançamento l ON l.id_lançamento = c.id_lançamento
+               WHERE c.período / 100 = :get_year""",
         show_spinner=False,
         ttl=0,
         params=dict(get_year=receive_year),
@@ -80,10 +80,10 @@ def load_extract_annual(receive_year: int) -> pd.DataFrame:
 @st.cache_data(show_spinner="⏳Obtendo os dados, aguarde...")
 def load_total_annual() -> pd.DataFrame:
     load: pd.DataFrame = engine.query(
-        sql="""SELECT e.período, SUM(e.valor) AS valor
-               FROM espelho e
-               GROUP BY e.período
-               ORDER BY e.período""",
+        sql="""SELECT c.período, SUM(c.valor) AS valor
+               FROM contracheque c
+               GROUP BY c.período
+               ORDER BY c.período""",
         show_spinner=False,
         ttl=0,
     )
@@ -150,7 +150,7 @@ def new_data() -> None:
         with engine.session as session:
             for row in st.session_state["editor"]["added_rows"]:
                 session.execute(
-                    statement=text("INSERT INTO espelho (id_lançamento, período, acerto, valor) "
+                    statement=text("INSERT INTO contracheque (id_lançamento, período, acerto, valor) "
                                    "VALUES (:id_lançamento, :período, :acerto, :valor)"),
                     params=dict(
                         id_lançamento=row["id_lançamento"],

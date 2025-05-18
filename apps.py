@@ -5,13 +5,8 @@ st.set_page_config(
     layout="wide",
 )
 
-st.markdown(
-    body="""<style>
-        [data-testid='stHeader'] {display: none;}
-        #MainMenu {visibility: hidden} footer {visibility: hidden}
-    </style>""",
-    unsafe_allow_html=True
-)
+with open("styles/styles.css") as f:
+    st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
 st.navigation(
     pages={
