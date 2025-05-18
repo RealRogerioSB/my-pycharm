@@ -1,13 +1,13 @@
 # mais informações: https://mailtrap.io/blog/python-send-email-gmail/
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-from smtplib import SMTP, SMTPException
+from smtplib import SMTP, SMTPConnectError, SMTPException, SMTPServerDisconnected
 
 subject = "Teste de envio de E-mail pelo Python"
 body = "Esse é o corpo de mensagem de texto."
 sender = "rogerioballoussier@gmail.com"
 password = "tzdk mqxa ltxe qrha"
-recipients = ["rogerioballoussier@gmail.com", "eusourogeriosb@outlook.com", "rogerioballoussier@bb.com.br"]
+recipients = ["rogerioballoussier@gmail.com", "rogerioballoussier@bb.com.br"]
 
 
 def send_email(sub, bod, sen, pas, rec):
@@ -25,8 +25,8 @@ def send_email(sub, bod, sen, pas, rec):
             smtp_server.sendmail(sen, rec, msg.as_string())
         except SMTPException as e:
             print(e)
-        except Exception as e:
-            print(e)
+        except (SMTPConnectError, SMTPServerDisconnected):
+            print("Erro/falha de conexão com o servidor SMTP.")
         else:
             print("Email enviado com sucesso!")
 

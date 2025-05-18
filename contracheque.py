@@ -1,5 +1,4 @@
 import locale
-import time
 from datetime import date
 
 import pandas as pd
@@ -16,14 +15,14 @@ sort_months: list[str] = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago"
 
 
 @st.cache_data(show_spinner="⏳Obtendo os dados, aguarde...")
-def get_release() -> dict[int: str]:
+def get_release() -> dict[str: int]:
     load = engine.query(
         sql="SELECT id_lançamento, lançamento FROM lançamento ORDER BY lançamento",
         show_spinner=False,
         ttl=0
     )
 
-    return {key: value for key, value in zip(load["id_lançamento"].to_list(), load["lançamento"].to_list())}
+    return {value: key for key, value in zip(load["id_lançamento"].to_list(), load["lançamento"].to_list())}
 
 
 @st.cache_data(show_spinner="⏳Obtendo os dados, aguarde...")
@@ -99,7 +98,11 @@ def load_total_annual() -> pd.DataFrame:
 
 
 @st.dialog(title=f"Inclusão do Mês de {date.today():%B}", width="large")
-def new_data():
+def new_data() -> None:
+    message = st.empty()
+
+    get = get_release()
+
     st.data_editor(
         data=pd.DataFrame(columns=["id_lançamento", "período", "acerto", "valor"]),
         use_container_width=True,
@@ -109,7 +112,7 @@ def new_data():
                 label="Lançamento",
                 width="large",
                 required=True,
-                options=get_release().values(),
+                options=get.keys(),
             ),
             "período": st.column_config.NumberColumn(
                 label="Período",
@@ -134,16 +137,15 @@ def new_data():
         num_rows="dynamic",
     )
 
-    if st.button("Salvar", type="primary", icon=":material/save:"):
+    st.button("Salvar", key="save", type="primary", icon=":material/save:")
+
+    if st.session_state["save"]:
         if not st.session_state["editor"]["added_rows"]:
-            st.toast("**Preencha os dados do registro.**", icon=":material/error:")
+            message.warning("**Preencha os dados do registro.**", icon=":material/warning:")
             st.stop()
 
         for row in st.session_state["editor"]["added_rows"]:
-            for chave, valor in get_release().items():
-                if valor == row["id_lançamento"]:
-                    row["id_lançamento"] = chave
-                    break
+            row["id_lançamento"] = get.get(row["id_lançamento"])
 
         with engine.session as session:
             for row in st.session_state["editor"]["added_rows"]:
@@ -157,10 +159,13 @@ def new_data():
                         valor=row["valor"],
                     ),
                 )
+
             session.commit()
 
-        st.toast("**Inclusão do novo registro com sucesso!**", icon=":material/check_circle:")
-        time.sleep(2)
+        message.info("**Inclusão do novo registro com sucesso!**", icon=":material/check_circle:")
+
+        st.cache_data.clear()
+
         st.rerun()
 
 
