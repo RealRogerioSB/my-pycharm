@@ -3,8 +3,8 @@ from datetime import date
 
 import pandas as pd
 import plotly.express as px
-from sqlalchemy import text
 import streamlit as st
+from sqlalchemy import text
 from streamlit.connections import SQLConnection
 
 locale.setlocale(locale.LC_ALL, "pt_BR.UTF-8")
@@ -70,8 +70,8 @@ def load_extract_annual(receive_year: int) -> pd.DataFrame:
     load["Mês"] = pd.to_datetime(load["Período"], format="%Y%m").dt.strftime("%b")
     load = load.pivot(columns="Mês", index=["Lançamento", "Acerto"], values="Valor").reset_index().fillna(value=0)
     load = load.reindex(columns=["Lançamento", "Acerto"] + [month for month in sort_months if month in load.columns])
-    load["Média"] = load.mean(axis=1, numeric_only=True)
-    load["Total"] = load[load.columns[1:-1]].sum(axis=1)
+    load["Média"] = load[load.columns[2:]].mean(axis=1)
+    load["Total"] = load[load.columns[2:-1]].sum(axis=1)
     load = load.sort_values(by=["Acerto", "Total"], ascending=[False, False])
 
     return load
@@ -80,10 +80,10 @@ def load_extract_annual(receive_year: int) -> pd.DataFrame:
 @st.cache_data(show_spinner="⏳Obtendo os dados, aguarde...")
 def load_total_annual() -> pd.DataFrame:
     load: pd.DataFrame = engine.query(
-        sql="""SELECT c.período, SUM(c.valor) AS valor
-               FROM contracheque c
-               GROUP BY c.período
-               ORDER BY c.período""",
+        sql="""SELECT período, SUM(valor) AS valor
+               FROM contracheque
+               GROUP BY período
+               ORDER BY período""",
         show_spinner=False,
         ttl=0,
     )
@@ -141,7 +141,7 @@ def new_data() -> None:
 
     if st.session_state["save"]:
         if not st.session_state["editor"]["added_rows"]:
-            message.warning("**Preencha os dados do registro.**", icon=":material/warning:")
+            message.warning("**A planilha não foi alterada...**", icon=":material/warning:")
             st.stop()
 
         for row in st.session_state["editor"]["added_rows"]:
@@ -236,39 +236,39 @@ with tab4:
         key="slider_graphic",
     )
 
-    df4: pd.DataFrame = load_total_annual().drop(["Média", "Total"], axis=1) \
-        .loc[st.session_state["slider_graphic"]].reset_index()
-    df4 = df4.rename(columns={st.session_state["slider_graphic"]: "salário"})
-    df4["salário"] = df4["salário"].apply(lambda val: locale.format_string("%.2f", val, grouping=True))
+    df4: pd.DataFrame = load_total_annual()
+    df4 = df4[df4.columns[:-2]] \
+        .loc[st.session_state["slider_graphic"]] \
+        .reset_index() \
+        .rename(columns={st.session_state["slider_graphic"]: "salário"})
 
     fig = px.bar(
-        data_frame=df4,  # define o DataFrame como fonte de dados para o gráfico
-        x="Mês",  # define os meses como eixo X
-        y="salário",  # define os salários como eixo Y
-        title=f"Espelho {st.session_state["slider_graphic"]}",  # define o título do gráfico
-        text=df4["salário"],  # exibe os valores salariais formatados no padrão brasileiro sobre as barras
-        color="salário",  # define a cor das barras com base nos valores salariais
-        color_continuous_scale="Viridis"  # aplica um esquema de cor gradiente ao gráfico
+        data_frame=df4,
+        x="Mês",
+        y="salário",
+        title=f"Espelho {st.session_state["slider_graphic"]}",
+        text=df4["salário"].apply(lambda x: locale.currency(x, grouping=True)),
+        color="salário",
+        color_continuous_scale="Viridis"
     )
 
-    # ajusta elementos visuais do layout do gráfico
     fig.update_layout(
-        xaxis_title="",  # remove o título do eixo X
-        yaxis_title="",  # remove o título do eixo Y
+        xaxis_title="",
+        yaxis_title="",
         xaxis=dict(
-            showline=True,  # adiciona uma linha no eixo X abaixo dos meses
-            linewidth=1,  # define a espessura da linha do eixo X
-            linecolor="gray",  # define a cor da linha do eixo X
-            showgrid=True  # exibe uma grade de fundo para facilitar a leitura dos valores
+            showline=True,
+            linewidth=1,
+            linecolor="gray",
+            showgrid=True
         ),
-        yaxis=dict(showticklabels=False),  # exibe os marcadores de valor no eixo Y
-        showlegend=False,  # remove a legenda do gráfico
-        coloraxis_showscale=True,  # exibe a escala de cores ao lado do gráfico
-        template="presentation",  # aplica um tema mais profissional ao gráfico
-        margin=dict(l=0, r=0, t=30, b=0),  # define as margens do gráfico
-        font=dict(size=13, color="black"),  # define o tamanho e a cor da fonte utilizada
+        yaxis=dict(showticklabels=False),
+        showlegend=False,
+        coloraxis_showscale=True,
+        template="presentation",
+        margin=dict(l=0, r=0, t=30, b=0),
+        font=dict(size=13, color="black"),
     )
 
-    fig.update_traces(textposition="outside")  # posiciona os valores acima de cada barra para melhor legibilidade
+    fig.update_traces(textposition="outside")
 
     st.plotly_chart(fig, use_container_width=True)
