@@ -15,7 +15,7 @@ st.header(":material/logo_dev: Meus Apps")
 
 col1, col2, col3 = st.columns(3, border=True)
 
-with col1.expander("Cotação de Moedas Estrangeiras", icon=":material/paid:"):
+with col1.expander("Cotação de Moedas Estrangeiras", icon="💰"):
     def format_date_br(date_default: str) -> str:
         return f"{datetime.strptime(date_default, format('%Y-%m-%d %H:%M:%S')):%d/%m/%Y %H:%M:%S}"
 
@@ -39,3 +39,12 @@ with col1.expander("Cotação de Moedas Estrangeiras", icon=":material/paid:"):
         st.caption(f"Moeda $   : {get_cota_gb['GBPBRL']['name']}")
         st.caption(f"Data/Hora : {format_date_br(get_cota_gb['GBPBRL']['create_date'])}")
         st.caption(f"Valor (R$): {get_cota_gb['GBPBRL']['bid'].replace('.', ',')}")
+
+with col2.expander("Markdown Incrível", icon="💯"):
+    st.markdown("*Streamlit* é **realmente** ***legal***.")
+    st.markdown("""
+        :red[Streamlit] :orange[pode] :green[escrever] :blue[texto] :violet[em]
+        :gray[belas] :rainbow[cores] e texto :blue-background[destacado].
+    """)
+    st.markdown("Here's a bouquet &mdash;"
+                " :tulip::cherry_blossom::rose::hibiscus::sunflower::blossom:")
