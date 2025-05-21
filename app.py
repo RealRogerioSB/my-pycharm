@@ -20,7 +20,7 @@ st.set_page_config(
 st.title("Teste de Streamlit")
 
 
-def tooggle_sidebar():
+def toggle_sidebar():
     if st.session_state["sidebar_state"] == "expanded":
         st.session_state["sidebar_state"] = "collapsed"
     else:
