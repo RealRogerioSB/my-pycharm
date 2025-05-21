@@ -3,7 +3,7 @@ body {
     margin-top: 0;
 }
 
-p {line-height: 0.5;}
+p {line-height: 0.5 !important;}
 
 #MainMenu {visibility: hidden} footer {visibility: hidden}
 
@@ -11,11 +11,11 @@ p {line-height: 0.5;}
 
 [data-testid='collapsedControl'] {display: none;}
 
-h1, h2, h3, h4, h5, h6 {margin-top: 0;}
+h1, h2, h3, h4, h5, h6 {margin-top: 0 !important;}
 
-body {
-    padding-top: 0;
-    margin-top: 0;
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap');
+
+* {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px !important;
 }
-
-p {line-height: 0.5;}
