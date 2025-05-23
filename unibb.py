@@ -13,8 +13,8 @@ def save_csv(frame: pd.DataFrame) -> None:
 
     else:
         frame.to_csv("~/Documents/unibb.csv", index=False)
+        st.toast("**A planilha foi alterada com sucesso!**", icon=":material/check_circle:")
         st.cache_data.clear()
-        st.toast("**Planilha alterada com sucesso!**", icon=":material/check_circle:")
 
 
 tab1, tab2 = st.tabs(["**Cursos da UniBB**", "**Cursos Duplicados**"])
