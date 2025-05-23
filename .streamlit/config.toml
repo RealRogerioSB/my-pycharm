@@ -21,7 +21,7 @@ showWidgetBorder = false
 borderColor = "gray"
 baseFontSize = 16
 showSidebarBorder = false
-baseRadius = "full"  # none, small, medium, large, full
+baseRadius = "none"  # none, small, medium, large, full
 
 #[[theme.fontFaces]]
 #family = "JetBrains Mono"
@@ -41,7 +41,7 @@ codeFont = "monospace"
 headingFont = "sans-serif"
 showWidgetBorder = false
 borderColor = "gray"
-baseRadius = "full"  # none, small, medium, large, full
+baseRadius = "small"  # none, small, medium, large, full
 
 [client]
 showErrorDetails = "full"
@@ -66,7 +66,7 @@ enableCORS = true
 maxUploadSize = 1000
 maxMessageSize = 1000
 enableWebsocketCompression = false
-enableStaticServing = true
+enableStaticServing = false
 disconnectedSessionTTL = 120
 
 #[browser]
