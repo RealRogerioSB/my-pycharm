@@ -5,6 +5,8 @@ import pandas as pd
 import plotly.express as px
 import streamlit as st
 
+from apps import toggle_sidebar
+
 locale.setlocale(locale.LC_ALL, "pt_BR.UTF-8")
 
 sort_months: list[str] = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
@@ -222,3 +224,6 @@ with tab4:
     fig.update_traces(textposition="outside")
 
     st.plotly_chart(fig, use_container_width=True)
+
+if st.button("**Voltar**", key="back", type="primary", icon=":material/reply:", on_click=toggle_sidebar):
+    st.switch_page("apps.py")

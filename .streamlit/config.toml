@@ -8,19 +8,19 @@ showWarningOnDirectExecution = true
 
 [theme]
 base = "light"
-primaryColor = "steelblue"
-backgroundColor = "#FFFFFF"
-textColor = "black"  # 000000
-secondaryBackgroundColor = "yellow"
-linkColor = "steelblue"
-codeBackgroundColor = "grey"
+primaryColor = "orange"
+backgroundColor = "mintcream"
+textColor = "dark"
+secondaryBackgroundColor = "lightcyan"
+linkColor = "awesome"
+codeBackgroundColor = "whitegrey"
 font = "sans-serif"  # serif, sans-serif, monospace, cursive, fantasy
 codeFont = "monospace"
 headingFont = "sans-serif"
 showWidgetBorder = false
-borderColor = "gray"
+borderColor = "whitegray"
 baseFontSize = 16
-showSidebarBorder = false
+showSidebarBorder = true
 baseRadius = "small"  # none, small, medium, large, full
 
 #[[theme.fontFaces]]
@@ -30,7 +30,7 @@ baseRadius = "small"  # none, small, medium, large, full
 #style = "normal"
 
 [theme.sidebar]
-primaryColor = "steelblue" # 0A3956
+primaryColor = "steelblue"
 backgroundColor = "yellow"
 textColor = "blue"
 secondaryBackgroundColor = "white"

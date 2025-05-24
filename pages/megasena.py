@@ -4,6 +4,8 @@ from datetime import date
 import pandas as pd
 import streamlit as st
 
+from apps import toggle_sidebar
+
 locale.setlocale(locale.LC_ALL, "pt_BR.UTF-8")
 
 minhas_apostas: list[str] = [
@@ -194,3 +196,6 @@ if st.session_state["xlsx_file"] and st.session_state["xlsx_file"].name == "Mega
             key="de_mega_da_virada",
             row_height=25,
         )
+
+if st.button("**Voltar**", key="back", type="primary", icon=":material/reply:", on_click=toggle_sidebar):
+    st.switch_page("apps.py")
