@@ -62,7 +62,7 @@ def load_extract_annual(receive_year: int) -> pd.DataFrame:
 
 @st.cache_data(show_spinner="⏳Obtendo os dados, aguarde...")
 def load_total_annual() -> pd.DataFrame:
-    load: pd.DataFrame = pd.read_csv("~/Documents/mirrors.csv")
+    load: pd.DataFrame = pd.read_csv(path_mirrors)
     load.columns = [str(coluna).capitalize() for coluna in load.columns]
     load = load.groupby(["Período"])["Valor"].sum().reset_index()
     load["Ano"] = pd.to_datetime(load["Período"], format="%Y%m").dt.year
@@ -77,8 +77,6 @@ def load_total_annual() -> pd.DataFrame:
 
 @st.dialog(title=f"Inclusão do Mês de {date.today():%B}", width="large")
 def new_data() -> None:
-    message = st.empty()
-
     get = get_release()
 
     st.data_editor(
@@ -94,10 +92,10 @@ def new_data() -> None:
             ),
             "período": st.column_config.NumberColumn(
                 label="Período",
+                required=True,
                 default=date.today().year * 100 + date.today().month,
                 min_value=200001,
                 max_value=203012,
-                required=True,
             ),
             "acerto": st.column_config.CheckboxColumn(
                 label="Acerto",
@@ -115,7 +113,7 @@ def new_data() -> None:
         num_rows="dynamic",
     )
 
-    st.button("Salvar", key="save", type="primary", icon=":material/save:")
+    st.columns(6)[-1].button("**Salvar**", key="save", type="primary", icon=":material/save:", use_container_width=True)
 
     if st.session_state["save"]:
         pass
@@ -145,7 +143,6 @@ with tab1:
             use_container_width=True,
             hide_index=True,
             column_config={"Valor": st.column_config.NumberColumn(format="dollar")},
-            key="de_monthly",
         )
 
 with tab2:
@@ -165,7 +162,6 @@ with tab2:
         hide_index=True,
         column_config={key: st.column_config.NumberColumn(format="dollar")
                        for key in df2.columns if key not in ["Lançamento", "Acerto"]},
-        key="de_annual",
     )
 
 with tab3:
@@ -176,7 +172,6 @@ with tab3:
             data=df3,
             use_container_width=True,
             column_config={key: st.column_config.NumberColumn(format="dollar") for key in df3.columns},
-            key="de_total_annual",
         )
 
 with tab4:

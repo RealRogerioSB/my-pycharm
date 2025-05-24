@@ -5,7 +5,9 @@ import streamlit as st
 
 from apps import toggle_sidebar
 
-unibb: pd.DataFrame = pd.read_csv("~/Documents/unibb.csv", parse_dates=["dt_curso"])
+file_csv: str = "~/Documents/unibb.csv"
+
+unibb: pd.DataFrame = pd.read_csv(file_csv, parse_dates=["dt_curso"])
 
 if "unibb" not in st.session_state:
     st.session_state["unibb"] = unibb
@@ -18,7 +20,7 @@ def save_csv(frame: pd.DataFrame) -> None:
     else:
         frame["id_curso"] = frame["id_curso"].astype(int)
         frame["cg_curso"] = frame["cg_curso"].astype(int)
-        frame.to_csv("~/Documents/unibb.csv", index=False)
+        frame.to_csv(file_csv, index=False)
         st.cache_data.clear()
         st.toast("**Planilha alterada com sucesso!**", icon=":material/check_circle:")
 
@@ -43,3 +45,16 @@ with tab1:
 
 if st.button("**Voltar**", key="back", type="primary", icon=":material/reply:", on_click=toggle_sidebar):
     st.switch_page("apps.py")
+
+with tab2:
+    st.dataframe(
+        data=unibb[unibb.duplicated(subset=["nm_curso"], keep=False)].sort_values(by=["nm_curso", "dt_curso"],),
+        hide_index=True,
+        use_container_width=True,
+        column_config={
+            "id_curso": st.column_config.NumberColumn("Código"),
+            "nm_curso": st.column_config.TextColumn("Código", width="large"),
+            "dt_curso": st.column_config.DateColumn("Código", format="DD/MM/YYYY"),
+            "cg_curso": st.column_config.NumberColumn("Código"),
+        },
+    )
