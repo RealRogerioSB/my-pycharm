@@ -21,7 +21,7 @@ showWidgetBorder = false
 borderColor = "gray"
 baseFontSize = 16
 showSidebarBorder = false
-baseRadius = "none"  # none, small, medium, large, full
+baseRadius = "small"  # none, small, medium, large, full
 
 #[[theme.fontFaces]]
 #family = "JetBrains Mono"

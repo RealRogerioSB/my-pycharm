@@ -4,34 +4,24 @@ from datetime import date
 import pandas as pd
 import plotly.express as px
 import streamlit as st
-from sqlalchemy import text
-from streamlit.connections import SQLConnection
 
 locale.setlocale(locale.LC_ALL, "pt_BR.UTF-8")
 
-engine: SQLConnection = st.connection(name="AIVEN-PG", type=SQLConnection)
-
 sort_months: list[str] = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
+
+path_lances: str = "~/Documents/lances.csv"
+path_mirrors: str = "~/Documents/mirrors.csv"
 
 
 @st.cache_data(show_spinner="⏳Obtendo os dados, aguarde...")
 def get_release() -> dict[str: int]:
-    load = engine.query(
-        sql="SELECT id_lançamento, lançamento FROM lançamento ORDER BY lançamento",
-        show_spinner=False,
-        ttl=0
-    )
-
+    load: pd.DataFrame = pd.read_csv(path_lances)
     return {value: key for key, value in zip(load["id_lançamento"].to_list(), load["lançamento"].to_list())}
 
 
 @st.cache_data(show_spinner="⏳Obtendo os dados, aguarde...")
 def last_period() -> int:
-    return engine.query(
-        sql="SELECT DISTINCT MAX(período) AS MAX_PERIOD FROM contracheque",
-        show_spinner=False,
-        ttl=0
-    )["max_period"].iloc[0]
+    return pd.read_csv(path_mirrors)["período"].max()
 
 
 take_year: int = int(last_period() / 100)
@@ -40,56 +30,42 @@ take_month: int = last_period() % 100
 
 @st.cache_data(show_spinner="⏳Obtendo os dados, aguarde...")
 def load_extract_monthly(receive_year: int, receive_month: int) -> pd.DataFrame:
-    load: pd.DataFrame = engine.query(
-        sql="""SELECT l.lançamento, c.período, c.acerto, c.valor
-               FROM contracheque c INNER JOIN lançamento l ON l.id_lançamento = c.id_lançamento
-               WHERE c.período / 100 = :get_year
-                 AND c.período % 100 = :get_month
-               ORDER BY c.período, c.acerto DESC, c.valor DESC""",
-        show_spinner=False,
-        ttl=0,
-        params=dict(get_year=receive_year, get_month=receive_month),
-    )
+    load: pd.DataFrame = pd.read_csv(path_mirrors).merge(pd.read_csv(path_lances), how="inner", on=["id_lançamento"])
     load.columns = [str(coluna).capitalize() for coluna in load.columns]
+    load["Ano"] = pd.to_datetime(load["Período"], format="%Y%m").dt.year
+    load["Mês"] = pd.to_datetime(load["Período"], format="%Y%m").dt.month
+    load = load[load["Ano"].eq(receive_year) & load["Mês"].eq(receive_month)]
+    load = load[["Lançamento", "Período", "Acerto", "Valor"]]
     load["Período"] = pd.to_datetime(load["Período"], format="%Y%m").dt.strftime("%B de %Y")
+    load.sort_values(["Acerto", "Valor"], ascending=[False, False], inplace=True)
 
     return load
 
 
 @st.cache_data(show_spinner="⏳Obtendo os dados, aguarde...")
 def load_extract_annual(receive_year: int) -> pd.DataFrame:
-    load: pd.DataFrame = engine.query(
-        sql="""SELECT l.lançamento, c.período, c.acerto, c.valor
-               FROM contracheque c INNER JOIN lançamento l ON l.id_lançamento = c.id_lançamento
-               WHERE c.período / 100 = :get_year""",
-        show_spinner=False,
-        ttl=0,
-        params=dict(get_year=receive_year),
-    )
+    load: pd.DataFrame = pd.read_csv(path_mirrors).merge(pd.read_csv(path_lances), how="inner", on=["id_lançamento"])
     load.columns = [str(coluna).capitalize() for coluna in load.columns]
+    load["Ano"] = pd.to_datetime(load["Período"], format="%Y%m").dt.year
+    load = load[load["Ano"].eq(receive_year)][["Lançamento", "Período", "Acerto", "Valor"]]
     load["Mês"] = pd.to_datetime(load["Período"], format="%Y%m").dt.strftime("%b")
     load = load.pivot(columns="Mês", index=["Lançamento", "Acerto"], values="Valor").reset_index().fillna(value=0)
     load = load.reindex(columns=["Lançamento", "Acerto"] + [month for month in sort_months if month in load.columns])
     load["Média"] = load[load.columns[2:]].mean(axis=1)
     load["Total"] = load[load.columns[2:-1]].sum(axis=1)
-    load = load.sort_values(by=["Acerto", "Total"], ascending=[False, False])
+    load = load.sort_values(["Acerto", "Total"], ascending=[False, False])
 
     return load
 
 
 @st.cache_data(show_spinner="⏳Obtendo os dados, aguarde...")
 def load_total_annual() -> pd.DataFrame:
-    load: pd.DataFrame = engine.query(
-        sql="""SELECT período, SUM(valor) AS valor
-               FROM contracheque
-               GROUP BY período
-               ORDER BY período""",
-        show_spinner=False,
-        ttl=0,
-    )
-    load["Ano"] = pd.to_datetime(load["período"], format="%Y%m").dt.year
-    load["Mês"] = pd.to_datetime(load["período"], format="%Y%m").dt.strftime("%b")
-    load = load.pivot(columns="Mês", index="Ano", values="valor").fillna(0)
+    load: pd.DataFrame = pd.read_csv("~/Documents/mirrors.csv")
+    load.columns = [str(coluna).capitalize() for coluna in load.columns]
+    load = load.groupby(["Período"])["Valor"].sum().reset_index()
+    load["Ano"] = pd.to_datetime(load["Período"], format="%Y%m").dt.year
+    load["Mês"] = pd.to_datetime(load["Período"], format="%Y%m").dt.strftime("%b")
+    load = load.pivot(columns="Mês", index="Ano", values="Valor").fillna(0)
     load = load.reindex(columns=[month for month in sort_months if month in load.columns])
     load["Média"] = load.mean(axis=1)
     load["Total"] = load[load.columns[:-1]].sum(axis=1)
@@ -140,33 +116,7 @@ def new_data() -> None:
     st.button("Salvar", key="save", type="primary", icon=":material/save:")
 
     if st.session_state["save"]:
-        if not st.session_state["editor"]["added_rows"]:
-            message.warning("**A planilha não foi alterada...**", icon=":material/warning:")
-            st.stop()
-
-        for row in st.session_state["editor"]["added_rows"]:
-            row["id_lançamento"] = get.get(row["id_lançamento"])
-
-        with engine.session as session:
-            for row in st.session_state["editor"]["added_rows"]:
-                session.execute(
-                    statement=text("INSERT INTO contracheque (id_lançamento, período, acerto, valor) "
-                                   "VALUES (:id_lançamento, :período, :acerto, :valor)"),
-                    params=dict(
-                        id_lançamento=row["id_lançamento"],
-                        período=row["período"],
-                        acerto=row["acerto"],
-                        valor=row["valor"],
-                    ),
-                )
-
-            session.commit()
-
-        message.info("**Inclusão do novo registro com sucesso!**", icon=":material/check_circle:")
-
-        st.cache_data.clear()
-
-        st.rerun()
+        pass
 
 
 tab1, tab2, tab3, tab4 = st.tabs(["**Extrato Mensal**", "**Extrato Anual**", "**Total Anual**", "**Gráfico**"])
