@@ -1,5 +1,6 @@
 from datetime import datetime
 
+import pandas as pd
 import requests
 import streamlit as st
 
@@ -21,24 +22,28 @@ with col1.expander("Cotação de Moedas Estrangeiras", icon="💰"):
 
 
     with st.spinner("**Carregando, aguarde...**", show_time=True):
-        get_cota_us = requests.get("https://economia.awesomeapi.com.br/last/USD-BRL").json()
-        get_cota_eu = requests.get("https://economia.awesomeapi.com.br/last/EUR-BRL").json()
-        get_cota_gb = requests.get("https://economia.awesomeapi.com.br/last/GBP-BRL").json()
+        get_cota_us = pd.DataFrame([requests.get("https://economia.awesomeapi.com.br/last/USD-BRL").json()["USDBRL"]])
+        get_cota_us = get_cota_us[["name", "create_date", "bid"]]
 
-        st.markdown("**:material/attach_money: Cotação do Dólar**")
-        st.markdown(f"Moeda $   : {get_cota_us['USDBRL']['name']}")
-        st.markdown(f"Data/Hora : {format_date_br(get_cota_us['USDBRL']['create_date'])}")
-        st.markdown(f"Valor (R$): {get_cota_us['USDBRL']['bid'].replace('.', ',')}")
-        st.markdown("")
-        st.markdown("**:material/euro: Cotação do Euro**")
-        st.markdown(f"Moeda $   : {get_cota_eu['EURBRL']['name']}")
-        st.markdown(f"Data/Hora : {format_date_br(get_cota_eu['EURBRL']['create_date'])}")
-        st.markdown(f"Valor (R$): {get_cota_eu['EURBRL']['bid'].replace('.', ',')}")
-        st.markdown("")
-        st.markdown("**:material/currency_pound: Cotação do Libra**")
-        st.markdown(f"Moeda $   : {get_cota_gb['GBPBRL']['name']}")
-        st.markdown(f"Data/Hora : {format_date_br(get_cota_gb['GBPBRL']['create_date'])}")
-        st.markdown(f"Valor (R$): {get_cota_gb['GBPBRL']['bid'].replace('.', ',')}")
+        get_cota_eu = pd.DataFrame([requests.get("https://economia.awesomeapi.com.br/last/EUR-BRL").json()["EURBRL"]])
+        get_cota_eu = get_cota_eu[["name", "create_date", "bid"]]
+
+        get_cota_gb = pd.DataFrame([requests.get("https://economia.awesomeapi.com.br/last/GBP-BRL").json()["GBPBRL"]])
+        get_cota_gb = get_cota_gb[["name", "create_date", "bid"]]
+
+        cota = pd.concat([get_cota_us, get_cota_eu, get_cota_gb])
+        cota["name"] = cota["name"].apply(lambda x: x.replace("/Real Brasileiro", ""))
+
+        st.dataframe(
+            data=cota,
+            hide_index=True,
+            use_container_width=True,
+            column_config={
+                "name": st.column_config.TextColumn("Moeda $"),
+                "create_date": st.column_config.DateColumn("Data/Hora", format="DD/MM/YYYY"),
+                "bid": st.column_config.NumberColumn("Valor R$", format="dollar"),
+            },
+        )
 
 with col2.expander("Markdown Incrível", icon="💯"):
     st.markdown("*Streamlit* é **realmente** ***legal***.")
