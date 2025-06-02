@@ -10,8 +10,8 @@ st.set_page_config(
     layout="wide",
 )
 
-with open("styles/styles.css") as f:
-    st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+# with open("styles/styles.css") as f:
+#     st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
 st.markdown("#### :material/logo_dev: Meus Apps")
 
@@ -119,6 +119,36 @@ with col3.expander("Algaritmo Romano", icon="💯"):
 
     msg_romano = st.empty()
 
+col1, col2, col3 = st.columns(3, border=True)
+
+with col1.expander("Série de Fibonacci", icon="💰"):
+    def fibonacci(n: int) -> list[int]:
+        sequencia: list[int] = [0, 1]
+
+        while len(sequencia) < n:
+            sequencia.append(sequencia[-1] + sequencia[-2])
+
+        return sequencia
+
+
+    st.number_input("Digite um número para gerar série de Fibonacci:", min_value=0, key="fibonacci")
+
+    msg_fibonacci = st.empty()
+
+with col2.expander("Número Primo", icon="💰"):
+    st.number_input("Digite um número para verificar se é primo:", key="prime", min_value=0)
+
+    msg_primo = st.empty()
+
+with col3.expander("Palíndromo", icon="💯"):
+    def truncar_texto(txt: str) -> str:
+        return unidecode(txt).lower().replace(" ", "")
+
+
+    st.text_input("Digite uma palavra ou frase para verificar se é palíndromo:", key="palindrome")
+
+    msg_palindrome = st.empty()
+
 if st.session_state["extenso"]:
     msg_extenso.markdown(f"O número por extenso é {num_extenso(st.session_state['extenso'])}.")
 
@@ -135,3 +165,24 @@ if st.session_state["site"]:
 
 if st.session_state["romano"]:
     msg_romano.markdown(f"O número convertido por romano é {alg_romano(st.session_state['romano'])}.")
+
+if st.session_state["fibonacci"]:
+    msg_fibonacci.markdown(f"A série de Fibonacci é {fibonacci(st.session_state['fibonacci'])}.")
+
+if st.session_state["prime"]:
+    divs = 0
+
+    for i in range(1, st.session_state["prime"] + 1):
+        if st.session_state["prime"] % i == 0:
+            divs += 1
+
+    msg_primo.markdown(f"O número {st.session_state['prime']} é primo!!!" if divs == 2
+                       else f"O número {st.session_state['prime']} não é primo!!!</br>"
+                            f"{st.session_state['prime']} é divisível por {divs} vez(es)...",
+                       unsafe_allow_html=True)
+
+if st.session_state["palindrome"]:
+    msg_palindrome.markdown(f"A palavra ou frase '{st.session_state['palindrome']}' é "
+                            f"{'palíndromo' if truncar_texto(st.session_state['palindrome']) == 
+                                               truncar_texto(st.session_state['palindrome'][::-1])
+                            else 'não palíndromo'}!!!")
