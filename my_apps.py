@@ -1,4 +1,8 @@
+import calendar
+import locale
+import random
 from datetime import datetime
+from string import ascii_letters, digits, punctuation
 
 import pandas as pd
 import requests
@@ -9,6 +13,8 @@ st.set_page_config(
     page_title="Streamlit Apps",
     layout="wide",
 )
+
+locale.setlocale(category=locale.LC_ALL, locale="pt_BR.UTF-8")
 
 # with open("styles/styles.css") as f:
 #     st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
@@ -59,7 +65,8 @@ with col3.expander("Valor por extenso", icon="💯"):
     def num_extenso(n: int) -> str:
         unidade = ["zero", "um", "dois", "três", "quatro", "cinco", "seis", "sete", "oito", "nove"]
         dez_x = ["dez", "onze", "doze", "treze", "quatorze", "quinze", "dezesseis", "dezessete", "dezoito", "dezenove"]
-        dezena = ["", "", "vinte", "trinta", "quarenta", "cinquenta", "sessenta", "setenta", "oitenta", "noventa", "cem"]
+        dezena = ["", "", "vinte", "trinta", "quarenta", "cinquenta", "sessenta", "setenta", "oitenta", "noventa",
+                  "cem"]
 
         return dezena[n // 10] + " e " + unidade[n % 10] \
             if n >= 20 and n % 10 != 0 else dezena[n // 10] \
@@ -101,7 +108,7 @@ with col2.expander("Checador de IP", icon="💯"):
 
     msg_site = st.empty()
 
-with col3.expander("Algaritmo Romano", icon="💯"):
+with col3.expander("Algoritmo Romano", icon="💯"):
     def alg_romano(num_rom):
         val_int = [1000, 900, 500, 400, 100, 90, 50, 40, 10, 9, 5, 4, 1]
         val_rom = ["M", "CM", "D", "CD", "C", "XC", "L", "XL", "X", "IX", "V", "IV", "I"]
@@ -149,6 +156,27 @@ with col3.expander("Palíndromo", icon="💯"):
 
     msg_palindrome = st.empty()
 
+col1, col2, col3 = st.columns(3, border=True)
+
+with col1.expander("Fatorial", icon="💰"):
+    def fatorial(x1):
+        return 1 if x1 == 1 else x1 * fatorial(x1 - 1)
+
+
+    st.number_input("Digite um número para fatorial:", key="fatorial", min_value=0)
+
+    msg_fatorial = st.empty()
+
+with col2.expander("Calendário Anual", icon="💰"):
+    st.number_input("Digite o ano:", min_value=1900, max_value=2100, value=datetime.today().year, key="calendar")
+
+    msg_calendar = st.empty()
+
+with col3.expander("Gerador de Senha", icon="💰"):
+    st.number_input("Escolha o tamanho da senha:", key="key_pass", min_value=0, max_value=64, value=8)
+
+    msg_pass = st.empty()
+
 if st.session_state["extenso"]:
     msg_extenso.markdown(f"O número por extenso é {num_extenso(st.session_state['extenso'])}.")
 
@@ -182,7 +210,18 @@ if st.session_state["prime"]:
                        unsafe_allow_html=True)
 
 if st.session_state["palindrome"]:
-    msg_palindrome.markdown(f"A palavra ou frase '{st.session_state['palindrome']}' é "
-                            f"{'palíndromo' if truncar_texto(st.session_state['palindrome']) == 
-                                               truncar_texto(st.session_state['palindrome'][::-1])
-                            else 'não palíndromo'}!!!")
+    msg_palindrome.markdown(f"A palavra ou frase '{st.session_state['palindrome']}' "
+                            f"{'' if truncar_texto(st.session_state['palindrome']) ==
+                                     truncar_texto(st.session_state['palindrome'][::-1]) else 'não'} é palíndromo!!!")
+
+if st.session_state["fatorial"]:
+    msg_fatorial.markdown(f"O fatorial de {st.session_state['fatorial']} é {fatorial(st.session_state['fatorial'])}.")
+
+if st.session_state["calendar"]:
+    msg_calendar.code(calendar.calendar(theyear=st.session_state["calendar"]))
+
+if st.session_state["key_pass"]:
+    symbols = ascii_letters + digits + punctuation
+    secure_random = random.SystemRandom()
+
+    msg_pass.markdown("".join(secure_random.choice(symbols) for _ in range(st.session_state["key_pass"])))
