@@ -1,6 +1,5 @@
 # esse arquivo vem com os diretórios 'pages',
 # contendo 3 arquivos .py, que são as páginas
-
 import streamlit as st
 
 if "sidebar_state" not in st.session_state:
@@ -32,15 +31,15 @@ with st.sidebar:
 
     with st.expander("**1. Página**"):
         if st.button("**Configuração**", type="primary", icon=":material/settings:",
-                     on_click=tooggle_sidebar, use_container_width=True):
+                     on_click=toggle_sidebar, use_container_width=True):
             st.switch_page("pages/1_config.py")
 
     with st.expander("**2. Página**"):
         if st.button("**Ferramenta**", type="primary", icon=":material/construction:",
-                     on_click=tooggle_sidebar, use_container_width=True):
+                     on_click=toggle_sidebar, use_container_width=True):
             st.switch_page("pages/2_tool.py")
 
     with st.expander("**3. Página**"):
         if st.button("**Ajuda**", type="primary", icon=":material/help:",
-                     on_click=tooggle_sidebar, use_container_width=True):
+                     on_click=toggle_sidebar, use_container_width=True):
             st.switch_page("pages/3_help.py")

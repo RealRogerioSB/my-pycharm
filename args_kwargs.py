@@ -1,12 +1,12 @@
-def calculate(*args, **kwargs):
-    soma = 0
+def calculate(*args, **kwargs) -> int:
+    soma: int = 0
 
     if args:
         soma = sum(args)
 
     if kwargs:
-        bonus = kwargs.get("bonus")
-        multiplication = kwargs.get("multiplication")
+        bonus: int = kwargs.get("bonus")
+        multiplication: int = kwargs.get("multiplication")
 
         if bonus:
             soma += bonus
