@@ -17,7 +17,7 @@ path_mirrors: str = "~/Documents/mirrors.csv"
 
 @st.cache_data(show_spinner="⏳Obtendo os dados, aguarde...")
 def get_release() -> dict[str: int]:
-    load: pd.DataFrame = pd.read_csv(path_lances)
+    load: pd.DataFrame = pd.read_csv(path_lances).sort_values(["lançamento"])
     return {value: key for key, value in zip(load["id_lançamento"].to_list(), load["lançamento"].to_list())}
 
 
@@ -77,7 +77,7 @@ def load_total_annual() -> pd.DataFrame:
 
 @st.dialog(title=f"Inclusão do Mês de {date.today():%B}", width="large")
 def new_data() -> None:
-    get = get_release()
+    get: dict[str, int] = get_release()
 
     st.data_editor(
         data=pd.DataFrame(columns=["id_lançamento", "período", "acerto", "valor"]),
@@ -113,10 +113,24 @@ def new_data() -> None:
         num_rows="dynamic",
     )
 
-    st.columns(6)[-1].button("**Salvar**", key="save", type="primary", icon=":material/save:", use_container_width=True)
+    *_, col5, col6 = st.columns([1, 1, 1, 1, 1, 1.2])
+    col5.button("**Salvar**", key="save", type="primary", icon=":material/save:", use_container_width=True)
+    col6.button("**Cancelar**", key="cancel", type="primary", icon=":material/reply:", use_container_width=True)
 
     if st.session_state["save"]:
-        pass
+        if st.session_state["editor"]["added_rows"]:
+            for row in st.session_state["editor"]["added_rows"]:
+                row["id_lançamento"] = get.get(row["id_lançamento"])
+
+            new_registers: pd.DataFrame = pd.DataFrame(st.session_state["editor"]["added_rows"])
+            new_registers = pd.concat([pd.read_csv(path_mirrors), new_registers], ignore_index=True)
+            new_registers.to_csv(path_mirrors, index=False)
+
+            st.cache_data.clear()
+            st.rerun()
+
+    if st.session_state["cancel"]:
+        st.rerun()
 
 
 tab1, tab2, tab3, tab4 = st.tabs(["**Extrato Mensal**", "**Extrato Anual**", "**Total Anual**", "**Gráfico**"])
